@@ -3554,10 +3554,10 @@
   .trueque-titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .btn.btn-actualizar-cartas { font-size: 0.55rem; padding: 8px 14px; margin: 0; white-space: nowrap; }
   .x-cierre-nota { margin-top: 8px; font-size: 0.74rem; color: var(--muted); }
-  /* Visor de intercambios: logo de la expansión y su nombre más grandes */
-  .visor-panel .visor-origen.visor-origen-grande { gap: 14px; padding: 10px 16px; min-height: 68px; }
-  .visor-panel .visor-origen-grande .visor-sobre-img { height: 54px; max-width: 46px; }
-  .visor-panel .visor-origen-grande .visor-origen-nombre { font-size: 1.08rem; }
+  /* Visor (consulta, mazos e intercambios): logo de la expansión y su nombre más grandes */
+  .visor-panel .visor-origen { gap: 14px; padding: 10px 16px; min-height: 68px; }
+  .visor-panel .visor-sobre-img { height: 52px; width: auto; max-width: 70px; object-fit: contain; }
+  .visor-panel .visor-origen-nombre { font-size: 1.08rem; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -10819,7 +10819,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   }
 
   // Sobre de origen: la imagen del sobre de la expansión y su nombre, en una caja del tamaño de un ataque
-  const iconoExpansion = iconoDeExpansionPorNombre(carta.expansion);
+  const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
     ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'">` : ''}<span class="visor-origen-nombre">${nombreExpansion}</span></div>`
@@ -14882,7 +14882,8 @@ function trueqeRegVisor(card) {
   const id = 'tq' + (++trueqeVisorSeq);
   delete TRUEQUE_VISOR['tq' + (trueqeVisorSeq - 900)];
   TRUEQUE_VISOR[id] = { id, ref: card, nombre: card.name, imagen: trueqeImagenGrande(card), rareza: trueqeRarezaDe(card),
-    expansion: card.setName || '', ataques: [], descripcion: '', cargado: true };
+    expansion: traducirExpansionTcgApi(card.setName) || card.setName || '', iconoUrl: trueqeSetIconUrl(card.setId),
+    ataques: [], descripcion: '', cargado: true };
   return id;
 }
 // Registra una lista de cartas para poder pasar de una a otra con ‹ › en el visor.
