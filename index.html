@@ -10396,9 +10396,22 @@ function mapearRarezaPocketDecks(simbolo) {
 // imágenes de zererr, que usa el mismo código de set en minúscula tanto
 // TCGdex como PocketDecks (ej. "a2b").
 const TCG_PACK_ICON_BASE = 'https://raw.githubusercontent.com/zererr/pokemon-tcg-pocket-images/main/images/png/packs';
+// Logos de las expansiones: primero se busca el archivo propio en la carpeta «logos-expansiones/» (junto al
+// index.html), con el nombre del código de la expansión en minúsculas: a1.png, b3b.png, etc. Si ese archivo no
+// existe, se usa el logo de internet de siempre.
+const TCG_LOGOS_LOCAL = 'logos-expansiones';
 function setCodeAIconoUrl(code) {
-  return code ? `${TCG_PACK_ICON_BASE}/${(code || '').toLowerCase()}.png` : '';
+  return code ? `${TCG_LOGOS_LOCAL}/${(code || '').toLowerCase()}.png` : '';
 }
+document.addEventListener('error', function (e) {
+  const el = e.target;
+  if (!el || el.tagName !== 'IMG' || el.dataset.logoRemoto) return;
+  const src = el.getAttribute('src') || '';
+  if (src.indexOf(TCG_LOGOS_LOCAL + '/') !== 0) return;
+  el.dataset.logoRemoto = '1';                                    // un solo reintento
+  e.stopImmediatePropagation();                                   // no se oculta todavía: se prueba con el logo de internet
+  el.src = `${TCG_PACK_ICON_BASE}/${src.slice(TCG_LOGOS_LOCAL.length + 1)}`;
+}, true);
 
 // Convierte el objeto de ataques de PocketDecks ({"1":{...},"2":{...}}) a un
 // array ordenado; si ya viniera como array (por compatibilidad), lo deja igual.
@@ -10822,7 +10835,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
-    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'">` : ''}<span class="visor-origen-nombre">${nombreExpansion}</span></div>`
+    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'">` : ''}<span class="visor-origen-nombre">${nombreExpansion}</span></div>`
     : '';
 
   return carta;
