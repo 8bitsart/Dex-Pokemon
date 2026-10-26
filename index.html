@@ -3555,7 +3555,7 @@
   .btn.btn-actualizar-cartas { font-size: 0.55rem; padding: 8px 14px; margin: 0; white-space: nowrap; }
   .x-cierre-nota { margin-top: 8px; font-size: 0.74rem; color: var(--muted); }
   /* Visor (consulta, mazos e intercambios): logo de la expansión al doble de tamaño, con su nombre debajo */
-  .visor-panel .visor-origen { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 14px 16px; min-height: 0; }
+  .visor-panel .visor-origen { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 10px 16px; min-height: 0; }
   .visor-panel .visor-sobre-img { width: 140px; height: auto; max-height: 104px; max-width: 100%; object-fit: contain; }
   .visor-panel .visor-origen-nombre { font-size: 1.08rem; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
@@ -10835,7 +10835,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
-    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'">` : ''}<span class="visor-origen-nombre">${nombreExpansion}</span></div>`
+    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.nextElementSibling; if (n) n.style.display=''">` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
     : '';
 
   return carta;
