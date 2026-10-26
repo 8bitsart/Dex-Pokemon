@@ -14956,12 +14956,12 @@ function trueqePickerRender(side) {
   const q = trueqeNormalizeSearch(document.getElementById('trueque-dd-search-' + side).value);
   const req = trueqeRarezaRequerida(side);
   const view = TRUEQUE_CARD_INDEX.filter(c =>
-    c.setName === exp && (!q || trueqeNormalizeSearch(c.name).includes(q)) && (!req || !req.rar || c.rarity === req.rar)
+    c.setName === exp && (!q || trueqeNormalizeSearch(c.name).includes(q)) && (!req || !req.rar || c.rarity === req.rar || (trueqeAdminUnlocked && !c.rarity))
   );
   trueqePickerView[side] = view;
   const chosen = new Set(trueqeSel[side].map(trueqeCardKey));
   const aviso = (req && req.rar && TRUEQUE_RAREZAS[req.rar])
-    ? `<div class="trueque-req-note">Solo cartas de rareza ${rarezaIconosHtml(req.rar)}, para cambiar por la carta ${req.idx + 1} del otro lado. Costo: ${trueqePolvoHtml(TRUEQUE_RAREZAS[req.rar].costo)}</div>` : '';
+    ? `<div class="trueque-req-note">Solo cartas de rareza ${rarezaIconosHtml(req.rar)}, para cambiar por la carta ${req.idx + 1} del otro lado.${trueqeAdminUnlocked ? ' (Como administrador también ves las que no tienen rareza, para corregirlas.)' : ''} Costo: ${trueqePolvoHtml(TRUEQUE_RAREZAS[req.rar].costo)}</div>` : '';
   grid.innerHTML = aviso + (view.length ? view.map((c, i) => `
     <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' locked' : ''}" title="${trueqeEsc(c.name)}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' · no se puede cambiar' : ''}" onclick="trueqePickerToggleCard('${side}', ${i}, this)">
       ${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? '<span class="dd-lock" aria-hidden="true">🔒</span>' : ''}
@@ -14991,6 +14991,10 @@ function trueqePickerToggleCard(side, i, el) {
       return;
     }
     const req = trueqeRarezaRequerida(side);
+    if (req && req.rar && !card.rarity && trueqeAdminUnlocked) {
+      showToast('⚠️ Esta carta no tiene rareza: elígela en el desplegable antes de usarla en este cambio.', true);
+      return;
+    }
     if (req && req.rar && card.rarity !== req.rar) {
       showToast(`⚠️ Esa carta no es de rareza ${trueqeSim(req.rar)}: solo se cambian cartas de la misma rareza.`, true);
       return;
@@ -15158,6 +15162,9 @@ function loadTrueques() {
     trueqeRenderChosen('ofrece');
     trueqeInitPickers();
   }
+  // Si se ingresó como administrador, el modo admin queda activo (igual que en Pokémon GO).
+  if (window.appSession && window.appSession.tipo === 'admin') trueqeSetAdmin(true);
+  trueqeMostrarAviso();
   adminPrepararSelector();
   trueqeFetchCards();
 }
@@ -15238,11 +15245,16 @@ function trueqeFiltrar(f, btn) {
 // contra el mismo usuario de Firebase Authentication que la sección Datos.
 let trueqeAdminUnlocked = false;
 
+function trueqeSetAdmin(on) {
+  trueqeAdminUnlocked = on;
+  const btn = document.getElementById('trueque-admin-btn');
+  if (btn) { btn.textContent = on ? '🔓 Salir de modo admin' : '🔑 Admin'; btn.classList.toggle('btn-danger', on); }
+}
+
 function trueqeAdminToggle() {
   const btn = document.getElementById('trueque-admin-btn');
   if (trueqeAdminUnlocked) {
-    trueqeAdminUnlocked = false;
-    if (btn) { btn.textContent = '🔑 Admin'; btn.classList.remove('btn-danger'); }
+    trueqeSetAdmin(false);
     trueqeRenderBinder();
     trueqeRefrescarVistaRarezas();
     showToast('🔒 Modo administrador desactivado');
@@ -15256,8 +15268,7 @@ function trueqeAdminToggle() {
   if (input == null) return;
   window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
     .then(() => {
-      trueqeAdminUnlocked = true;
-      if (btn) { btn.textContent = '🔓 Salir de modo admin'; btn.classList.add('btn-danger'); }
+      trueqeSetAdmin(true);
       trueqeRenderBinder();
       trueqeRefrescarVistaRarezas();
       showToast('🔓 Modo administrador activado: puedes borrar publicaciones y corregir la rareza de las cartas con "?"');
