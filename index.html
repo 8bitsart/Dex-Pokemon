@@ -3553,6 +3553,7 @@
   /* Botón «Actualizar cartas»: mismo diseño y tipografía que «Cambiar modo», ajustado a la fila del título */
   .trueque-titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .btn.btn-actualizar-cartas { font-size: 0.55rem; padding: 8px 14px; margin: 0; white-space: nowrap; }
+  .x-cierre-nota { margin-top: 8px; font-size: 0.74rem; color: var(--muted); }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -15307,16 +15308,16 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
     ofrece: t.ofrece.map((x, i) => mk(x, i, regO)),
     notas: c.notas ? trueqeEsc(c.notas) : '',
     extra: trueqeCostoPostHtml(t) + contactoPublicoHtml(c),
-    borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}${trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">✕ Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
   });
 }
 
 async function trueqeEliminarCarta(cardId) {
-  if (!window._fbDb || (!trueqeUser && !trueqeAdminUnlocked)) return;
+  if (!window._fbDb) return;
   const carta = trueqeCards.find(c => c.id === cardId);
   if (!carta) return;
-  // Se puede borrar la publicación propia, o cualquiera si se activó el modo admin.
-  if ((!trueqeUser || carta.userId !== trueqeUser.id) && !trueqeAdminUnlocked) return;
+  // Las publicaciones solo las elimina el administrador (con el modo admin activado).
+  if (!trueqeAdminUnlocked) { showToast('🔒 Solo el administrador puede eliminar publicaciones', true); return; }
   if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
   try {
     await window._fbDb.collection('trueques_cartas').doc(cardId).delete();
@@ -16116,7 +16117,7 @@ function tgoCardHtml(c, showDelete, esAdmin) {
     ofrece,
     notas: c.notas ? tgoEsc(c.notas) : '',
     extra: contactoPublicoHtml(c),
-    borrar: showDelete ? `${tgoDoneBtnHtml(c)}<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c)}${tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">✕ Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
   });
 }
 
@@ -16293,10 +16294,10 @@ function tgoRender() {
 
 async function tgoEliminar(cardId) {
   if (!window._fbDb) return;
-  const u = tgoUser();
   const carta = tgoCards.find(c => c.id === cardId);
   if (!carta) return;
-  if ((!u || carta.userId !== u.id) && !tgoAdminUnlocked) return;
+  // Las publicaciones solo las elimina el administrador (con el modo admin activado).
+  if (!tgoAdminUnlocked) { showToast('🔒 Solo el administrador puede eliminar publicaciones', true); return; }
   if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
   try {
     await window._fbDb.collection(TGO_COL).doc(cardId).delete();
