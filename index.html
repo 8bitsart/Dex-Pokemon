@@ -3549,6 +3549,10 @@
   .carta-nombre-rareza .tcg-rareza-img { height: 18px; }
   .trueque-dd-item.locked { opacity: 0.5; filter: grayscale(0.6); cursor: not-allowed; position: relative; }
   .trueque-dd-item .dd-lock { position: absolute; top: 4px; right: 6px; z-index: 2; font-size: 0.85rem; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+  .dd-rar-sel { max-width: 100%; margin-top: 3px; font-size: 0.66rem; background: #1b1e26; color: #fff; border: 1px solid rgba(255,215,94,0.6); border-radius: 5px; padding: 2px 3px; }
+  /* Botón «Actualizar cartas»: mismo diseño y tipografía que «Cambiar modo», ajustado a la fila del título */
+  .trueque-titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .btn.btn-actualizar-cartas { font-size: 0.55rem; padding: 8px 14px; margin: 0; white-space: nowrap; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -4101,7 +4105,7 @@
           👤 <span id="trueque-whoami-name"></span>
           <span id="trueque-admin-como-wrap" style="display:none"> · Publicar como <select id="trueque-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span>
         </div>
-        <h3>➕ Publicar intercambio <button type="button" class="trueque-refresh-btn" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">↻ Actualizar cartas</button></h3>
+        <h3 class="trueque-titulo-fila">➕ Publicar intercambio <button type="button" class="btn btn-pixel-amarillo btn-contorno btn-actualizar-cartas" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">Actualizar cartas</button></h3>
         <div id="trueque-rar-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e"></div>
         <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
@@ -14287,6 +14291,8 @@ function trueqePolvoHtml(n) {
 // Rareza de una carta: la que trae guardada o, si es una publicación vieja, la del índice de cartas.
 function trueqeRarezaDe(card) {
   if (!card) return '';
+  const adm = TRUEQUE_RAR_ADMIN.get(trueqeKeyRarAdmin(card.setId, card.localId));
+  if (adm) return adm;
   const man = trueqeRarezaManual(card.setId, [card.setName], parseInt(card.localId, 10));
   if (man) return man;
   if (card.rarity) return card.rarity;
@@ -14666,21 +14672,80 @@ async function trueqeRefrescarIndice() {
   showToast('✅ Cartas actualizadas');
 }
 
+// ── RAREZAS CORREGIDAS POR EL ADMINISTRADOR ─────────────────────────────────
+// En modo admin, las cartas sin rareza muestran un desplegable en el selector. Lo elegido se guarda en
+// Firestore (colección «trueques_rarezas») para que lo vean todos, y en el navegador como respaldo.
+const TRUEQUE_RAR_ADMIN = new Map();          // "codigoSet|número" -> código de rareza
+const TRUEQUE_RAR_ADMIN_LS = 'trueque_rar_admin_v1';
+const TRUEQUE_RAR_ORDEN = ['C', 'U', 'R', 'RR', 'AR', 'SAR', 'IM', 'SH', 'SHEX', 'CR'];
+const TRUEQUE_RAR_TEXTO = { C: '♦', U: '♦♦', R: '♦♦♦', RR: '♦♦♦♦', AR: '★', SAR: '★★', IM: '★★★', SH: '✦', SHEX: '✦✦', CR: '👑' };
+
+function trueqeKeyRarAdmin(setId, localId) { return trueqeSetKey(setId) + '|' + parseInt(localId, 10); }
+function trueqeIdRarAdmin(key) { return key.replace('|', '_'); }
+
+function trueqeAplicarRarezasAdmin() {
+  if (!TRUEQUE_CARD_INDEX) return;
+  TRUEQUE_CARD_INDEX.forEach(c => {
+    const o = TRUEQUE_RAR_ADMIN.get(trueqeKeyRarAdmin(c.setId, c.localId));
+    if (o) { if (c.rar0 === undefined) c.rar0 = c.rarity || ''; c.rarity = o; }
+    else if (c.rar0 !== undefined) { c.rarity = c.rar0; delete c.rar0; }   // se quitó la corrección: vuelve la de las fuentes
+  });
+  TRUEQUE_RAR_LOOKUP = null;
+}
+async function trueqeCargarRarezasAdmin() {
+  try {
+    const l = JSON.parse(localStorage.getItem(TRUEQUE_RAR_ADMIN_LS) || '{}');
+    Object.keys(l).forEach(k => TRUEQUE_RAR_ADMIN.set(k, l[k]));
+  } catch (e) { /* sin respaldo local */ }
+  try {
+    if (window._fbDb) {
+      const snap = await window._fbDb.collection('trueques_rarezas').get();
+      const nube = new Map();
+      snap.forEach(d => { const v = d.data() || {}; if (v.k && v.rarity) nube.set(v.k, v.rarity); });
+      nube.forEach((r, k) => TRUEQUE_RAR_ADMIN.set(k, r));   // lo de la nube manda; lo que solo está en este navegador se conserva
+      try { localStorage.setItem(TRUEQUE_RAR_ADMIN_LS, JSON.stringify(Object.fromEntries(TRUEQUE_RAR_ADMIN))); } catch (e) {}
+    }
+  } catch (e) { /* si no se puede leer la nube, se usa lo que haya en el navegador */ }
+  trueqeAplicarRarezasAdmin();
+}
+async function trueqeAdminSetRareza(sel) {
+  if (!trueqeAdminUnlocked) return;
+  const d = sel.dataset, code = sel.value, key = trueqeKeyRarAdmin(d.set, d.num);
+  if (code) TRUEQUE_RAR_ADMIN.set(key, code); else TRUEQUE_RAR_ADMIN.delete(key);
+  try { localStorage.setItem(TRUEQUE_RAR_ADMIN_LS, JSON.stringify(Object.fromEntries(TRUEQUE_RAR_ADMIN))); } catch (e) {}
+  trueqeAplicarRarezasAdmin();
+  trueqeRefrescarVistaRarezas();
+  try {
+    const ref = window._fbDb.collection('trueques_rarezas').doc(trueqeIdRarAdmin(key));
+    if (code) await ref.set({ k: key, rarity: code, setId: d.set, localId: String(d.num), name: d.name || '', ts: Date.now() });
+    else await ref.delete();
+    showToast(code ? '✅ Rareza guardada para todos' : '↩️ Corrección quitada');
+  } catch (e) {
+    console.error(e);
+    showToast('⚠️ Se guardó solo en este navegador. Para que la vean todos, las reglas de Firestore deben permitir escribir en "trueques_rarezas".', true);
+  }
+}
+function trueqeRefrescarVistaRarezas() {
+  trueqeMostrarAviso();
+  ['busca', 'ofrece'].forEach(sd => {
+    const pnl = document.getElementById('trueque-dd-panel-' + sd);
+    if (pnl && pnl.style.display !== 'none') trueqePickerRender(sd);
+  });
+  trueqeRenderChosen('busca'); trueqeRenderChosen('ofrece');
+  trueqeRenderBinder(); trueqeRenderMine();
+}
+
 function trueqeMostrarAviso() {
   const el = document.getElementById('trueque-rar-aviso');
   if (!el) return;
-  let html = '';
-  if (TRUEQUE_RAR_OCULTAS > 0) {
-    const vals = [...TRUEQUE_RAR_DESC].slice(0, 6).join(' · ');
-    html += `<div>⚠️ ${TRUEQUE_RAR_OCULTAS} cartas no tienen rareza identificada: se muestran, pero sin costo y no se pueden emparejar por rareza.` + (vals ? ` Valores sin reconocer: ${trueqeEsc(vals)}` : '') + '</div>';
+  const faltan = (trueqeAdminUnlocked && TRUEQUE_CARD_INDEX) ? TRUEQUE_CARD_INDEX.filter(c => !c.rarity).length : 0;
+  if (faltan > 0) {
+    el.style.display = '';
+    el.textContent = `⚠️ ${faltan} ${faltan === 1 ? 'carta no tiene' : 'cartas no tienen'} rareza. Elígela en el desplegable que aparece en lugar del "?".`;
+  } else {
+    el.style.display = 'none';
+    el.textContent = '';
   }
-  if (TRUEQUE_REPORTE.length) {
-    const filas = TRUEQUE_REPORTE.map(r => `<div style="margin:3px 0"><b>${trueqeEsc(r.nombre)}</b> <span style="opacity:.7">(${trueqeEsc(r.id)})</span>: ${r.total} cartas` +
-      (r.excl ? ` · bloqueadas, no se cambian (corona / 3★): ${r.excl}` : '') + (r.huecos ? ` · <span style="color:#ff8a80">sin datos en: ${r.huecos}</span>` : '') + '</div>').join('');
-    html += `<details style="margin-top:4px;color:var(--muted)"><summary style="cursor:pointer">Ver detalle de cartas por expansión</summary>${filas}</details>`;
-  }
-  el.style.display = html ? '' : 'none';
-  el.innerHTML = html;
 }
 
 let trueqeSets = []; // [{ name, logo }]
@@ -14710,6 +14775,7 @@ async function trueqeInitPickers() {
       sides.forEach(side => trueqeExpSetLabel(side, 'No se pudieron cargar las expansiones (vuelve a abrir la sección)'));
       return;
     }
+    await trueqeCargarRarezasAdmin();
     trueqeSets = sets;
     trueqeMostrarAviso();
     sides.forEach(side => {
@@ -14876,6 +14942,11 @@ function trueqeRarezaRequerida(side) {
   return c ? { idx: i, rar: c.rarity || '' } : null;
 }
 
+function trueqeSelectRarezaHtml(c) {
+  const opts = TRUEQUE_RAR_ORDEN.map(k => `<option value="${k}"${c.rarity === k ? ' selected' : ''}>${TRUEQUE_RAR_TEXTO[k]} ${trueqeEsc((RAREZA_INFO[k] || {}).label || k)}</option>`).join('');
+  return `<select class="dd-rar-sel" title="Elegir la rareza de esta carta" onclick="event.stopPropagation()" onchange="trueqeAdminSetRareza(this)"
+    data-set="${trueqeEsc(String(c.setId))}" data-num="${trueqeEsc(String(c.localId))}" data-name="${trueqeEsc(c.name)}"><option value="">? sin rareza</option>${opts}</select>`;
+}
 function trueqePickerRender(side) {
   const exp = document.getElementById('trueque-exp-' + side).value;
   const grid = document.getElementById('trueque-dd-grid-' + side);
@@ -14894,7 +14965,7 @@ function trueqePickerRender(side) {
     <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' locked' : ''}" title="${trueqeEsc(c.name)}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' · no se puede cambiar' : ''}" onclick="trueqePickerToggleCard('${side}', ${i}, this)">
       ${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? '<span class="dd-lock" aria-hidden="true">🔒</span>' : ''}
       ${trueqeImgHtml(c, true)}
-      <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}${c.rarity ? ` <span class="dd-rar">${rarezaIconosHtml(c.rarity)}</span>` : ' <span class="dd-rar" title="Rareza sin identificar">?</span>'}</div>
+      <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}${(trueqeAdminUnlocked && (!c.rarity || c.rar0 !== undefined)) ? ' ' + trueqeSelectRarezaHtml(c) : (c.rarity ? ` <span class="dd-rar">${rarezaIconosHtml(c.rarity)}</span>` : ' <span class="dd-rar" title="Rareza sin identificar">?</span>')}</div>
     </div>
   `).join('') : `<div class="trueque-autocomplete-empty" style="grid-column:1/-1">${req && req.rar ? 'No hay cartas de esa rareza en esta expansión.' : 'No hay cartas con ese nombre en esta expansión.'}</div>`);
   grid.scrollTop = scroll;
@@ -15172,6 +15243,7 @@ function trueqeAdminToggle() {
     trueqeAdminUnlocked = false;
     if (btn) { btn.textContent = '🔑 Admin'; btn.classList.remove('btn-danger'); }
     trueqeRenderBinder();
+    trueqeRefrescarVistaRarezas();
     showToast('🔒 Modo administrador desactivado');
     return;
   }
@@ -15186,7 +15258,8 @@ function trueqeAdminToggle() {
       trueqeAdminUnlocked = true;
       if (btn) { btn.textContent = '🔓 Salir de modo admin'; btn.classList.add('btn-danger'); }
       trueqeRenderBinder();
-      showToast('🔓 Modo administrador activado: ya puedes borrar cualquier publicación del tablón');
+      trueqeRefrescarVistaRarezas();
+      showToast('🔓 Modo administrador activado: puedes borrar publicaciones y corregir la rareza de las cartas con "?"');
     })
     .catch(() => {
       showToast('❌ Contraseña incorrecta', true);
