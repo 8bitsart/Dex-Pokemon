@@ -4,7 +4,7 @@
   "description": "Buscador Pokémon con torneos, mazos, expansiones y trueques.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1a1a2e",
+  "background_color": "#000000",
   "theme_color": "#E3350D",
   "orientation": "portrait-primary",
   "icons": [
