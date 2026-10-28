@@ -3628,6 +3628,22 @@
   .u-offline { color: var(--muted); white-space: nowrap; }
   .u-label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--muted); margin-bottom: 3px; text-align: left; }
 </style>
+<style>
+  /* Movimientos Legacy de GO */
+  .result-item.legacy .ri-value { color: var(--yellow); }
+  .result-item.legacy { border-left-color: var(--yellow); }
+  .legacy-alt { margin-top: 8px; }
+  .legacy-alt summary { cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--yellow); list-style: none; user-select: none; }
+  .legacy-alt summary::-webkit-details-marker { display: none; }
+  .legacy-alt summary::before { content: '▸ '; }
+  .legacy-alt[open] summary::before { content: '▾ '; }
+  .legacy-alt-body { margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border-radius: 6px; font-weight: 800; color: var(--white); display: flex; align-items: center; gap: 6px; }
+  .legacy-alt-body .empty { color: var(--muted); font-weight: 400; font-style: italic; font-size: 0.85rem; }
+  .go-legacy-aviso { display: none; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 0.85rem; font-weight: 700; color: #FFD60A; line-height: 1.35; }
+  .go-legacy-punto { flex-shrink: 0; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--yellow); }
+  .legacy-check-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8rem; color: var(--yellow); font-weight: 700; cursor: pointer; }
+  .legacy-alt-row { margin-top: 4px; }
+</style>
 </head>
 <body>
 
@@ -3757,6 +3773,7 @@
       <div id="go-liga-list-section" class="search-section" style="display:none">
         <span class="search-label" id="go-liga-list-label">Pokémon en esta liga</span>
         <div id="go-liga-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+        <div id="go-liga-legacy-aviso" class="go-legacy-aviso" style="display:none"><span class="go-legacy-punto"></span><span>El ataque pintado de color naranja corresponde a un movimiento Legacy, utiliza el desplegable para ver su alternativa.</span></div>
         <button class="btn btn-pixel-amarillo btn-contorno" id="go-liga-btn-otra-liga" style="margin-top:12px" onclick="goLigaListaVolver()">← Elegir otra liga</button>
         <button class="btn btn-pixel-amarillo btn-contorno" id="go-liga-btn-otro-pokemon" style="margin-top:12px;display:none" onclick="goLigaElegirOtroPokemon()">← Elegir otro Pokémon</button>
       </div>
@@ -5230,7 +5247,18 @@ function goLigaRestaurarTarjeta() {
   goLigaTarjetaOrigen = null;
 }
 
+// Aviso Legacy: se ve solo con un Pokémon elegido dentro de una liga y si alguno
+// de sus movimientos está marcado como Legacy.
+let goLegacyHay = false;
+let goLigaConPokemon = false;
+function goLigaActualizarAviso() {
+  const av = document.getElementById('go-liga-legacy-aviso');
+  if (av) av.style.display = (goLigaConPokemon && goLegacyHay) ? 'flex' : 'none';
+}
+
 function goLigaEstadoBotones(conPokemonElegido) {
+  goLigaConPokemon = !!conPokemonElegido;
+  goLigaActualizarAviso();
   const otraLiga = document.getElementById('go-liga-btn-otra-liga');
   const otroPokemon = document.getElementById('go-liga-btn-otro-pokemon');
   if (otraLiga) otraLiga.style.display = conPokemonElegido ? 'none' : '';
@@ -6790,6 +6818,7 @@ function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 async function showResult(name) {
   const el = document.getElementById('result-content');
   if (!name) {
+    goLegacyHay = false; goLigaActualizarAviso();
     el.innerHTML = currentMode === 'go'
       ? '<div class="result-empty">Elige un Pokémon de la lista para ver su información</div>'
       : '<div class="result-empty">Ingresa un nombre para ver la información</div>';
@@ -6861,20 +6890,26 @@ async function showResult(name) {
     const statsItemsHTML = currentGoConsultaLiga
       ? filaNivel(currentGoConsultaLiga) + filaCP(currentGoConsultaLiga) + filaStats(currentGoConsultaLiga)
       : LIGA_LIST.map(l => filaNivel(l) + filaCP(l) + filaStats(l)).join('');
+    // Movimiento de GO. Si es Legacy se pinta de naranja y debajo lleva un
+    // desplegable con su alternativa.
+    const filaMov = (label, mov, tipo, legacy, alt, altTipo) => {
+      const esLegacy = !isEmpty(mov) && legacy === '1';
+      const altHTML = esLegacy
+        ? `<details class="legacy-alt"><summary>Ver alternativa</summary><div class="legacy-alt-body">${altTipo ? typeIconHTML(altTipo) : ''}<span class="${isEmpty(alt)?'empty':''}">${val(alt,'Sin alternativa registrada')}</span></div></details>`
+        : '';
+      return `<div class="result-item${esLegacy ? ' legacy' : ''}">
+        <div class="ri-label">${label}</div>
+        <div class="ri-value ${isEmpty(mov)?'empty':''}">${tipo ? typeIconHTML(tipo) : ''}${val(mov,'Sin datos')}</div>
+        ${altHTML}
+      </div>`;
+    };
     bodyHTML = `
       ${statsItemsHTML}
-      <div class="result-item">
-        <div class="ri-label">Movimiento rápido</div>
-        <div class="ri-value ${isEmpty(d.movRapido)?'empty':''}">${d.tipoRapido ? typeIconHTML(d.tipoRapido) : ''}${val(d.movRapido,'Sin datos')}</div>
-      </div>
-      <div class="result-item">
-        <div class="ri-label">Movimiento cargado</div>
-        <div class="ri-value ${isEmpty(d.movCargado)?'empty':''}">${d.tipoCargado ? typeIconHTML(d.tipoCargado) : ''}${val(d.movCargado,'Sin datos')}</div>
-      </div>
-      <div class="result-item">
-        <div class="ri-label">Movimiento cargado 2</div>
-        <div class="ri-value ${isEmpty(d.movCargado2)?'empty':''}">${d.tipoCargado2 ? typeIconHTML(d.tipoCargado2) : ''}${val(d.movCargado2,'Sin datos')}</div>
-      </div>`;
+${filaMov('Movimiento rápido', d.movRapido, d.tipoRapido, d.legacyRapido, d.altRapido, d.altTipoRapido)}
+      ${filaMov('Movimiento cargado', d.movCargado, d.tipoCargado, d.legacyCargado, d.altCargado, d.altTipoCargado)}
+      ${filaMov('Movimiento cargado 2', d.movCargado2, d.tipoCargado2, d.legacyCargado2, d.altCargado2, d.altTipoCargado2)}`;
+    goLegacyHay = [[d.movRapido,d.legacyRapido],[d.movCargado,d.legacyCargado],[d.movCargado2,d.legacyCargado2]].some(([m,l]) => !isEmpty(m) && l === '1');
+    goLigaActualizarAviso();
   } else if (currentMode === 'tcg') {
     const d = getTCGData(name);
     const cartas = Array.isArray(d.cartas) ? d.cartas : [];
@@ -7210,7 +7245,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', habilidad:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ nivelSuper:'', nivelUltra:'', nivelMaster:'', cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
+const EMPTY_GO         = () => ({ legacyRapido:'', altRapido:'', altTipoRapido:'', legacyCargado:'', altCargado:'', altTipoCargado:'', legacyCargado2:'', altCargado2:'', altTipoCargado2:'', nivelSuper:'', nivelUltra:'', nivelMaster:'', cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -8608,7 +8643,8 @@ async function goSugerirVacios() {
 
 const MOVE_FIELD_TO_TYPE_FIELD = {
   ataque1: 'tipo1', ataque2: 'tipo2', ataque3: 'tipo3', ataque4: 'tipo4',
-  movRapido: 'tipoRapido', movCargado: 'tipoCargado', movCargado2: 'tipoCargado2'
+  movRapido: 'tipoRapido', movCargado: 'tipoCargado', movCargado2: 'tipoCargado2',
+  altRapido: 'altTipoRapido', altCargado: 'altTipoCargado', altCargado2: 'altTipoCargado2'
 };
 
 // Se engancha en el evento "blur" (al salir del campo) de los inputs de
@@ -10086,6 +10122,14 @@ function renderTableGO() {
           <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoRapido">${typeOptionsHTML(d.tipoRapido)}</select>
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipoRapido)}</span>
         </div>
+        <label class="legacy-check-row"><input type="checkbox" class="legacy-check" data-pokemon="${esc(name)}" data-field="legacyRapido"${d.legacyRapido === '1' ? ' checked' : ''}> Legacy</label>
+        <div class="legacy-alt-row" style="display:${d.legacyRapido === '1' ? '' : 'none'}">
+          <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="altRapido" data-game="go" value="${esc(d.altRapido)}" placeholder="Alternativa">
+          <div class="move-type-row">
+            <select class="move-type-select" data-pokemon="${esc(name)}" data-field="altTipoRapido">${typeOptionsHTML(d.altTipoRapido)}</select>
+            <span class="move-type-icon-wrap">${typeIconHTML(d.altTipoRapido)}</span>
+          </div>
+        </div>
       </td>
       <td>
         <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movCargado" data-game="go" value="${esc(d.movCargado)}" placeholder="Ej: Avalancha">
@@ -10093,12 +10137,28 @@ function renderTableGO() {
           <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoCargado">${typeOptionsHTML(d.tipoCargado)}</select>
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipoCargado)}</span>
         </div>
+        <label class="legacy-check-row"><input type="checkbox" class="legacy-check" data-pokemon="${esc(name)}" data-field="legacyCargado"${d.legacyCargado === '1' ? ' checked' : ''}> Legacy</label>
+        <div class="legacy-alt-row" style="display:${d.legacyCargado === '1' ? '' : 'none'}">
+          <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="altCargado" data-game="go" value="${esc(d.altCargado)}" placeholder="Alternativa">
+          <div class="move-type-row">
+            <select class="move-type-select" data-pokemon="${esc(name)}" data-field="altTipoCargado">${typeOptionsHTML(d.altTipoCargado)}</select>
+            <span class="move-type-icon-wrap">${typeIconHTML(d.altTipoCargado)}</span>
+          </div>
+        </div>
       </td>
       <td>
         <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movCargado2" data-game="go" value="${esc(d.movCargado2)}" placeholder="Ej: Puño Trueno">
         <div class="move-type-row">
           <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoCargado2">${typeOptionsHTML(d.tipoCargado2)}</select>
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipoCargado2)}</span>
+        </div>
+        <label class="legacy-check-row"><input type="checkbox" class="legacy-check" data-pokemon="${esc(name)}" data-field="legacyCargado2"${d.legacyCargado2 === '1' ? ' checked' : ''}> Legacy</label>
+        <div class="legacy-alt-row" style="display:${d.legacyCargado2 === '1' ? '' : 'none'}">
+          <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="altCargado2" data-game="go" value="${esc(d.altCargado2)}" placeholder="Alternativa">
+          <div class="move-type-row">
+            <select class="move-type-select" data-pokemon="${esc(name)}" data-field="altTipoCargado2">${typeOptionsHTML(d.altTipoCargado2)}</select>
+            <span class="move-type-icon-wrap">${typeIconHTML(d.altTipoCargado2)}</span>
+          </div>
         </div>
       </td>
       <td>
@@ -10134,6 +10194,17 @@ function renderTableGO() {
       const p = input.dataset.pokemon, f = input.dataset.field;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
       dataGO[p][f] = formatted;
+    });
+  });
+  // Casilla Legacy: marca el movimiento y muestra/oculta su alternativa.
+  tbody.querySelectorAll('.legacy-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const p = cb.dataset.pokemon, f = cb.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = cb.checked ? '1' : '';
+      const fila = cb.closest('td') && cb.closest('td').querySelector('.legacy-alt-row');
+      if (fila) fila.style.display = cb.checked ? '' : 'none';
+      autoguardarDatos('go');
     });
   });
   // Nivel (Liga Super/Ultra/Master): máximo 2 cifras enteras y, si hace falta,
