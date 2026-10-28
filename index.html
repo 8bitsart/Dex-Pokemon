@@ -8648,6 +8648,8 @@ async function goSugerirDesdePvpoke(name) {
 
   const bAtk = p.baseStats.atk, bDef = p.baseStats.def, bSta = p.baseStats.hp;
   const resultado = {};
+  // Solo se completan las ligas que el Pokémon tiene marcadas.
+  const ligasMarcadas = (dataGO[name] && dataGO[name].ligas) || [];
 
   // Nivel, IVs y CP de cada liga: los IVs/nivel de PvPoke para el mejor rendimiento.
   const ligas = [
@@ -8655,7 +8657,7 @@ async function goSugerirDesdePvpoke(name) {
     { suf: 'Ultra',  cpKey: 'cp2500', tope: 2500,  cpCampo: 'cpUltra' },
     { suf: 'Master', cpKey: null,     tope: 10000, cpCampo: 'cpMax' }
   ];
-  ligas.forEach(l => {
+  ligas.filter(l => ligasMarcadas.includes('Liga ' + l.suf)).forEach(l => {
     let nivel = 50, iv = [15, 15, 15];
     const def = l.cpKey && p.defaultIVs && p.defaultIVs[l.cpKey];
     if (Array.isArray(def) && def.length >= 4) { nivel = def[0]; iv = [def[1], def[2], def[3]]; }
@@ -8706,6 +8708,20 @@ async function goSugerirDesdePvpoke(name) {
   return resultado;
 }
 
+// Quita de una sugerencia los datos de las ligas que el Pokémon no tiene marcadas.
+function goFiltrarPorLigas(sugerido, ligasMarcadas) {
+  const camposPorLiga = {
+    'Liga Super':  ['nivelSuper', 'statsSuper', 'cpSuper'],
+    'Liga Ultra':  ['nivelUltra', 'statsUltra', 'cpUltra'],
+    'Liga Master': ['nivelMaster', 'statsMaster', 'cpMax']
+  };
+  const r = { ...sugerido };
+  Object.entries(camposPorLiga).forEach(([liga, campos]) => {
+    if (!ligasMarcadas.includes(liga)) campos.forEach(c => { delete r[c]; });
+  });
+  return r;
+}
+
 // Sugerencia de un Pokémon de GO: PvPoke primero; si PvPoke no responde o no lo
 // tiene, queda la estimación anterior (PokeAPI) avisando que no es oficial.
 async function goObtenerSugerencia(name) {
@@ -8717,7 +8733,8 @@ async function goObtenerSugerencia(name) {
     return {
       sugerido: {
         legacyRapido: '', altRapido: '', altTipoRapido: '', legacyCargado: '', altCargado: '', altTipoCargado: '',
-        legacyCargado2: '', altCargado2: '', altTipoCargado2: '', ...goComputeSuggestion(apiData)
+        legacyCargado2: '', altCargado2: '', altTipoCargado2: '',
+        ...goFiltrarPorLigas(goComputeSuggestion(apiData), (dataGO[name] && dataGO[name].ligas) || [])
       },
       fuente: 'estimacion'
     };
@@ -8743,8 +8760,13 @@ async function goSugerirUno(name) {
 // GO — "Sugerir para los vacíos" — no para el check de reparación de más
 // abajo, que es independiente de qué tan completos estén los datos).
 function esGoDatoCompleto(d) {
-  return !!(d && d.movRapido && d.movCargado && d.cpMax && d.cpSuper && d.cpUltra
-    && d.statsSuper && d.statsUltra && d.statsMaster);
+  if (!d || !d.movRapido || !d.movCargado) return false;
+  const reglas = {
+    'Liga Super':  ['cpSuper', 'statsSuper'],
+    'Liga Ultra':  ['cpUltra', 'statsUltra'],
+    'Liga Master': ['cpMax', 'statsMaster']
+  };
+  return (d.ligas || []).every(l => !reglas[l] || reglas[l].every(c => d[c]));
 }
 function esChampionsDatoCompleto(d) {
   return !!(d && d.naturaleza && d.objeto && d.ataque1 && d.ataque2 && d.ataque3 && d.ataque4);
