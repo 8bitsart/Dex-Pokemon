@@ -8549,11 +8549,14 @@ function goComputeSuggestion({ types, movepool, stats }) {
 // IVs y nivel recomendados por liga, y el moveset que PvPoke recomienda según
 // sus rankings, con los movimientos Legacy marcados. Si pvpoke.com no responde
 // se prueba el mismo archivo en el repositorio público de PvPoke (GitHub).
+// Si no se puede leer PvPoke NO se inventa nada: se avisa el motivo y no se
+// modifica el Pokémon.
 const PVPOKE_FUENTES = [
   'https://pvpoke.com/data',
   'https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data'
 ];
 const PVPOKE_ALIAS_SLUG = { nidoranf: 'nidoranfemale', nidoranm: 'nidoranmale' };
+const PVPOKE_NOMBRE_LIGA = { 1500: 'Liga Super', 2500: 'Liga Ultra', 10000: 'Liga Master' };
 let pvpokeGamemasterPromise = null;
 const pvpokeRankingsPromises = {};
 const pvNorm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -8562,55 +8565,67 @@ async function pvpokeFetchJson(url, ms = 25000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const r = await fetch(url, { signal: ctrl.signal });
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-cache' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } finally { clearTimeout(t); }
 }
 
-// Prueba cada fuente y cada ruta hasta que una devuelva algo válido.
+// Prueba cada fuente y cada ruta hasta que una devuelva algo válido. Si ninguna
+// sirve, lanza un error que lista qué falló en cada dirección.
 async function pvpokeProbar(rutas, valida) {
+  const fallos = [];
   for (const base of PVPOKE_FUENTES) {
     for (const ruta of rutas) {
+      const url = `${base}/${ruta}`;
       try {
-        const j = await pvpokeFetchJson(`${base}/${ruta}`);
+        const j = await pvpokeFetchJson(url);
         if (valida(j)) return j;
-      } catch (e) { /* se prueba la siguiente */ }
+        fallos.push(`${url}: formato inesperado`);
+      } catch (e) {
+        fallos.push(`${url}: ${e.name === 'AbortError' ? 'sin respuesta' : e.message}`);
+      }
     }
   }
-  return null;
+  throw new Error(fallos.join(' | '));
 }
 
 function pvpokeCargarGamemaster() {
   if (!pvpokeGamemasterPromise) {
     pvpokeGamemasterPromise = (async () => {
-      let gm = await pvpokeProbar(['gamemaster.min.json', 'gamemaster.json'],
-        j => j && Array.isArray(j.pokemon) && Array.isArray(j.moves));
-      if (!gm) {
-        const pokemon = await pvpokeProbar(['gamemaster/pokemon.json'], j => Array.isArray(j));
-        const moves = await pvpokeProbar(['gamemaster/moves.json'], j => Array.isArray(j));
-        if (pokemon && moves) gm = { pokemon, moves };
+      let gm;
+      try {
+        gm = await pvpokeProbar(['gamemaster.min.json', 'gamemaster.json'],
+          j => j && Array.isArray(j.pokemon) && Array.isArray(j.moves));
+      } catch (e1) {
+        try {
+          const pokemon = await pvpokeProbar(['gamemaster/pokemon.json'], j => Array.isArray(j));
+          const moves = await pvpokeProbar(['gamemaster/moves.json'], j => Array.isArray(j));
+          gm = { pokemon, moves };
+        } catch (e2) {
+          throw new Error('No se pudo leer PvPoke → ' + e1.message);
+        }
       }
-      if (!gm) return null;
       const moves = {}, porNorm = {};
       gm.moves.forEach(m => { moves[m.moveId] = m; });
       gm.pokemon.forEach(p => { const k = pvNorm(p.speciesId); if (!porNorm[k]) porNorm[k] = p; });
       return { pokemon: gm.pokemon, porNorm, moves };
-    })().then(r => { if (!r) pvpokeGamemasterPromise = null; return r; },
-              e => { pvpokeGamemasterPromise = null; throw e; });
+    })();
+    pvpokeGamemasterPromise.catch(() => { pvpokeGamemasterPromise = null; });
   }
   return pvpokeGamemasterPromise;
 }
 
 function pvpokeCargarRanking(cap) {
   if (!pvpokeRankingsPromises[cap]) {
-    pvpokeRankingsPromises[cap] = pvpokeProbar([`rankings/all/overall/rankings-${cap}.json`], j => Array.isArray(j))
+    const prom = pvpokeProbar([`rankings/all/overall/rankings-${cap}.json`], j => Array.isArray(j))
       .then(arr => {
-        if (!arr) { delete pvpokeRankingsPromises[cap]; return null; }
         const m = {};
         arr.forEach(r => { m[r.speciesId] = r; });
         return m;
       });
+    pvpokeRankingsPromises[cap] = prom;
+    prom.catch(() => { delete pvpokeRankingsPromises[cap]; });
   }
   return pvpokeRankingsPromises[cap];
 }
@@ -8640,16 +8655,18 @@ function pvpokeMovimiento(idx, moveId) {
   };
 }
 
+// Devuelve { datos, ligaMoveset, avisos }. Lanza un error si no se pudo leer PvPoke.
 async function goSugerirDesdePvpoke(name) {
   const idx = await pvpokeCargarGamemaster();
-  if (!idx) throw new Error('No se pudo descargar la información de PvPoke');
   const p = pvpokeBuscar(idx, name);
   if (!p || !p.baseStats) throw new Error('PvPoke no tiene a ' + name);
 
   const bAtk = p.baseStats.atk, bDef = p.baseStats.def, bSta = p.baseStats.hp;
   const resultado = {};
+  const avisos = [];
   // Solo se completan las ligas que el Pokémon tiene marcadas.
   const ligasMarcadas = (dataGO[name] && dataGO[name].ligas) || [];
+  if (!ligasMarcadas.length) avisos.push('no tiene ninguna liga marcada, así que solo se completaron movimientos');
 
   // Nivel, IVs y CP de cada liga: los IVs/nivel de PvPoke para el mejor rendimiento.
   const ligas = [
@@ -8672,24 +8689,35 @@ async function goSugerirDesdePvpoke(name) {
     resultado[l.cpCampo] = String(cp);
   });
 
-  // Movimientos: los que recomienda el ranking de PvPoke (primero la liga asignada
-  // al Pokémon, después las demás). Sin ranking, los primeros de su lista.
+  // Movimientos: los que recomienda el ranking de PvPoke (primero la liga marcada
+  // del Pokémon, después las demás). Si PvPoke no recomienda un moveset para él,
+  // los movimientos que ya tenía NO se tocan.
   const capDeLiga = { 'Liga Super': 1500, 'Liga Ultra': 2500, 'Liga Master': 10000 };
-  const asignadas = ((dataGO[name] && dataGO[name].ligas) || []).map(l => capDeLiga[l]).filter(Boolean);
+  const asignadas = ligasMarcadas.map(l => capDeLiga[l]).filter(Boolean);
   const orden = [...new Set([...asignadas, 1500, 2500, 10000])];
-  let ranking = null;
+  let ranking = null, capRanking = null, rankingsLeidos = 0, errRanking = null;
   for (const cap of orden) {
-    const r = await pvpokeCargarRanking(cap);
-    if (r && r[p.speciesId] && Array.isArray(r[p.speciesId].moveset)) { ranking = r[p.speciesId]; break; }
+    let r;
+    try { r = await pvpokeCargarRanking(cap); rankingsLeidos++; }
+    catch (e) { errRanking = e; continue; }
+    if (r && r[p.speciesId] && Array.isArray(r[p.speciesId].moveset)) { ranking = r[p.speciesId]; capRanking = cap; break; }
   }
+  if (!ranking && !rankingsLeidos && errRanking) {
+    throw new Error('No se pudo leer el ranking de PvPoke → ' + errRanking.message);
+  }
+  if (!ranking) {
+    avisos.push('PvPoke no recomienda movimientos para este Pokémon, no se tocaron los que ya tenía');
+    return { datos: resultado, ligaMoveset: null, avisos };
+  }
+
   const fast = p.fastMoves || [], charged = p.chargedMoves || [];
-  const moveset = ranking ? ranking.moveset : [fast[0], charged[0], charged[1]];
+  const moveset = ranking.moveset;
   const legacy = new Set([...(p.legacyMoves || []), ...(p.eliteMoves || [])]);
   const enUso = new Set(moveset.filter(Boolean));
 
   const alternativa = (esRapido) => {
     const lista = esRapido ? fast : charged;
-    const usos = ranking && ranking.moves ? ((esRapido ? ranking.moves.fastMoves : ranking.moves.chargedMoves) || []) : [];
+    const usos = ranking.moves ? ((esRapido ? ranking.moves.fastMoves : ranking.moves.chargedMoves) || []) : [];
     const porUso = usos.slice().sort((a, b) => (b.uses || 0) - (a.uses || 0)).map(u => u.moveId);
     return porUso.concat(lista).find(id => lista.includes(id) && !legacy.has(id) && !enUso.has(id) && idx.moves[id]) || null;
   };
@@ -8705,54 +8733,21 @@ async function goSugerirDesdePvpoke(name) {
     resultado['alt' + suf] = alt ? alt.nombre : '';
     resultado['altTipo' + suf] = alt ? alt.tipo : '';
   });
-  return resultado;
-}
-
-// Quita de una sugerencia los datos de las ligas que el Pokémon no tiene marcadas.
-function goFiltrarPorLigas(sugerido, ligasMarcadas) {
-  const camposPorLiga = {
-    'Liga Super':  ['nivelSuper', 'statsSuper', 'cpSuper'],
-    'Liga Ultra':  ['nivelUltra', 'statsUltra', 'cpUltra'],
-    'Liga Master': ['nivelMaster', 'statsMaster', 'cpMax']
-  };
-  const r = { ...sugerido };
-  Object.entries(camposPorLiga).forEach(([liga, campos]) => {
-    if (!ligasMarcadas.includes(liga)) campos.forEach(c => { delete r[c]; });
-  });
-  return r;
-}
-
-// Sugerencia de un Pokémon de GO: PvPoke primero; si PvPoke no responde o no lo
-// tiene, queda la estimación anterior (PokeAPI) avisando que no es oficial.
-async function goObtenerSugerencia(name) {
-  try {
-    return { sugerido: await goSugerirDesdePvpoke(name), fuente: 'pvpoke' };
-  } catch (ePv) {
-    console.warn('PvPoke:', ePv);
-    const apiData = await championsFetchPokeApiData(name);
-    return {
-      sugerido: {
-        legacyRapido: '', altRapido: '', altTipoRapido: '', legacyCargado: '', altCargado: '', altTipoCargado: '',
-        legacyCargado2: '', altCargado2: '', altTipoCargado2: '',
-        ...goFiltrarPorLigas(goComputeSuggestion(apiData), (dataGO[name] && dataGO[name].ligas) || [])
-      },
-      fuente: 'estimacion'
-    };
-  }
+  return { datos: resultado, ligaMoveset: PVPOKE_NOMBRE_LIGA[capRanking], avisos };
 }
 
 async function goSugerirUno(name) {
   try {
-    const { sugerido, fuente } = await goObtenerSugerencia(name);
-    dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...sugerido };
+    const { datos, ligaMoveset, avisos } = await goSugerirDesdePvpoke(name);
+    dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...datos };
     persistAll();
     renderTableGO();
-    showToast(fuente === 'pvpoke'
-      ? '🪄 Sugerencia de PvPoke aplicada a ' + name
-      : '🪄 PvPoke no tenía datos de ' + name + ': se aplicó una estimación (no oficial)');
+    showToast('🪄 PvPoke aplicado a ' + name
+      + (ligaMoveset ? ' (movimientos del ranking de ' + ligaMoveset + ')' : '')
+      + (avisos.length ? ' — ' + avisos.join('; ') : ''));
   } catch (e) {
-    console.error(e);
-    showToast('❌ No se pudo generar una sugerencia para ' + name, true);
+    console.error('Sugerencia PvPoke', name, e);
+    showToast('❌ ' + name + ': ' + String(e.message).slice(0, 220), true);
   }
 }
 
@@ -8826,15 +8821,16 @@ async function goSugerirVacios() {
     goSugerirEnCurso = false;
     return;
   }
-  let hechos = 0, dePvpoke = 0, estimados = 0, sinDatos = 0;
+  let hechos = 0, dePvpoke = 0, sinDatos = 0, primerError = '';
   for (const name of pendientes) {
     if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name})`;
     try {
-      const { sugerido, fuente } = await goObtenerSugerencia(name);
-      dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...sugerido };
-      if (fuente === 'pvpoke') dePvpoke++; else estimados++;
+      const { datos } = await goSugerirDesdePvpoke(name);
+      dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...datos };
+      dePvpoke++;
     } catch (e) {
       sinDatos++;
+      if (!primerError) primerError = String(e.message).slice(0, 200);
       console.log('Sin sugerencia para', name, e);
     }
     hechos++;
@@ -8842,8 +8838,7 @@ async function goSugerirVacios() {
   persistAll();
   renderTableGO();
   if (status) status.textContent = `Listo: ${dePvpoke} Pokémon completados con datos de PvPoke`
-    + (estimados ? `, ${estimados} con una estimación no oficial (PvPoke no los tenía)` : '')
-    + (sinDatos ? `, ${sinDatos} sin sugerencia` : '') + '.';
+    + (sinDatos ? `, ${sinDatos} sin cambios (${primerError})` : '') + '.';
   goSugerirEnCurso = false;
 }
 
