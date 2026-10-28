@@ -3939,6 +3939,9 @@
               <th style="text-align:center"><input type="checkbox" class="table-select-all-th" onchange="toggleSelectAllRows(this.checked)"></th>
               <th>#</th>
               <th>Pokémon</th>
+              <th>Nivel — Liga Super</th>
+              <th>Nivel — Liga Ultra</th>
+              <th>Nivel — Liga Master</th>
               <th>CP — Liga Super</th>
               <th>CP — Liga Ultra</th>
               <th>CP — Liga Master</th>
@@ -6841,6 +6844,12 @@ async function showResult(name) {
     // un solo "CP Máximo" general (cpMax queda como el de Master, por
     // compatibilidad con los datos ya guardados).
     const cpPorLiga = { 'Liga Super': d.cpSuper, 'Liga Ultra': d.cpUltra, 'Liga Master': d.cpMax };
+    // Nivel por liga (2 cifras, a veces con decimal: 24.5, 40, 50...). Va encima del CP.
+    const nivelPorLiga = { 'Liga Super': d.nivelSuper, 'Liga Ultra': d.nivelUltra, 'Liga Master': d.nivelMaster };
+    const filaNivel = liga => `<div class="result-item">
+          <div class="ri-label">Nivel — ${esc(liga)}</div>
+          <div class="ri-value ${isEmpty(nivelPorLiga[liga])?'empty':''}">${val(nivelPorLiga[liga],'Sin datos')}</div>
+        </div>`;
     const filaCP = liga => `<div class="result-item">
           <div class="ri-label">CP — ${esc(liga)}</div>
           <div class="ri-value ${isEmpty(cpPorLiga[liga])?'empty':''}">${val(cpPorLiga[liga],'Sin datos')}</div>
@@ -6850,8 +6859,8 @@ async function showResult(name) {
           <div class="ri-value ${isEmpty(statsPorLiga[liga])?'empty':''}">${val(statsPorLiga[liga],'Sin datos')}</div>
         </div>`;
     const statsItemsHTML = currentGoConsultaLiga
-      ? filaCP(currentGoConsultaLiga) + filaStats(currentGoConsultaLiga)
-      : LIGA_LIST.map(l => filaCP(l) + filaStats(l)).join('');
+      ? filaNivel(currentGoConsultaLiga) + filaCP(currentGoConsultaLiga) + filaStats(currentGoConsultaLiga)
+      : LIGA_LIST.map(l => filaNivel(l) + filaCP(l) + filaStats(l)).join('');
     bodyHTML = `
       ${statsItemsHTML}
       <div class="result-item">
@@ -7201,7 +7210,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', habilidad:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
+const EMPTY_GO         = () => ({ nivelSuper:'', nivelUltra:'', nivelMaster:'', cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -7405,7 +7414,7 @@ function pokemonVacioChampions(nombre) {
 
 function pokemonVacioGo(nombre) {
   const d = dataGO[nombre] || EMPTY_GO();
-  return !d.cpMax && !d.cpSuper && !d.cpUltra && !d.statsSuper && !d.statsUltra && !d.statsMaster &&
+  return !d.nivelSuper && !d.nivelUltra && !d.nivelMaster && !d.cpMax && !d.cpSuper && !d.cpUltra && !d.statsSuper && !d.statsUltra && !d.statsMaster &&
     !d.movRapido && !d.movCargado && !d.movCargado2 && (!d.ligas || d.ligas.length === 0);
 }
 
@@ -8403,6 +8412,10 @@ const GO_CPM_TABLE = {
   34:0.7583, 34.5:0.761472627, 35:0.7645, 35.5:0.767669553, 36:0.7705, 36.5:0.773562367,
   37:0.7767, 37.5:0.779751667, 38:0.7828, 38.5:0.785902482, 39:0.7889, 39.5:0.789661374, 40:0.79030001
 };
+// Niveles 41 a 50 (nivel máximo del juego): el multiplicador sube 0,005 por
+// nivel completo y los medios niveles son el promedio cuadrático de sus vecinos.
+for (let l = 41; l <= 50; l++) GO_CPM_TABLE[l] = 0.79030001 + 0.005 * (l - 40);
+for (let l = 41; l <= 50; l++) GO_CPM_TABLE[l - 0.5] = Math.sqrt((GO_CPM_TABLE[l - 1] ** 2 + GO_CPM_TABLE[l] ** 2) / 2);
 const GO_NIVELES = Object.keys(GO_CPM_TABLE).map(Number).sort((a, b) => a - b);
 
 // Convierte estadísticas base de los juegos principales a una estimación
@@ -8434,7 +8447,7 @@ function calcularCPGo(baseAtk, baseDef, baseSta, ivAtk, ivDef, ivSta, nivel) {
 // IVs 15/15/15) es lo mejor posible.
 function sugerirIVsParaLiga(baseAtk, baseDef, baseSta, topeCp) {
   if (!topeCp) {
-    return { nivel: 40, ivAtk: 15, ivDef: 15, ivSta: 15, cp: calcularCPGo(baseAtk, baseDef, baseSta, 15, 15, 15, 40) };
+    return { nivel: 50, ivAtk: 15, ivDef: 15, ivSta: 15, cp: calcularCPGo(baseAtk, baseDef, baseSta, 15, 15, 15, 50) };
   }
   let mejor = null;
   for (const nivel of GO_NIVELES) {
@@ -8489,9 +8502,9 @@ function goComputeSuggestion({ types, movepool, stats }) {
     const super_ = sugerirIVsParaLiga(atk, def, sta, 1500);
     const ultra = sugerirIVsParaLiga(atk, def, sta, 2500);
     const master = sugerirIVsParaLiga(atk, def, sta, null);
-    if (super_) { resultado.statsSuper = `${super_.ivAtk}/${super_.ivDef}/${super_.ivSta}`; resultado.cpSuper = String(super_.cp); }
-    if (ultra) { resultado.statsUltra = `${ultra.ivAtk}/${ultra.ivDef}/${ultra.ivSta}`; resultado.cpUltra = String(ultra.cp); }
-    if (master) { resultado.statsMaster = `${master.ivAtk}/${master.ivDef}/${master.ivSta}`; resultado.cpMax = String(master.cp); }
+    if (super_) { resultado.statsSuper = `${super_.ivAtk}/${super_.ivDef}/${super_.ivSta}`; resultado.cpSuper = String(super_.cp); resultado.nivelSuper = String(super_.nivel); }
+    if (ultra) { resultado.statsUltra = `${ultra.ivAtk}/${ultra.ivDef}/${ultra.ivSta}`; resultado.cpUltra = String(ultra.cp); resultado.nivelUltra = String(ultra.nivel); }
+    if (master) { resultado.statsMaster = `${master.ivAtk}/${master.ivDef}/${master.ivSta}`; resultado.cpMax = String(master.cp); resultado.nivelMaster = String(master.nivel); }
   }
   return resultado;
 }
@@ -10058,6 +10071,9 @@ function renderTableGO() {
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
       <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
+      <td><input class="editable-cell nivel-input" data-pokemon="${esc(name)}" data-field="nivelSuper" value="${esc(d.nivelSuper)}" placeholder="Ej: 24.5" inputmode="decimal" maxlength="5" autocomplete="off"></td>
+      <td><input class="editable-cell nivel-input" data-pokemon="${esc(name)}" data-field="nivelUltra" value="${esc(d.nivelUltra)}" placeholder="Ej: 40" inputmode="decimal" maxlength="5" autocomplete="off"></td>
+      <td><input class="editable-cell nivel-input" data-pokemon="${esc(name)}" data-field="nivelMaster" value="${esc(d.nivelMaster)}" placeholder="Ej: 50" inputmode="decimal" maxlength="5" autocomplete="off"></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpSuper" value="${esc(d.cpSuper)}" placeholder="Ej: 1498"></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpUltra" value="${esc(d.cpUltra)}" placeholder="Ej: 2497"></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpMax" value="${esc(d.cpMax)}" placeholder="Ej: 3500"></td>
@@ -10098,7 +10114,7 @@ function renderTableGO() {
     </tr>`;
   }).join('');
 
-  tbody.querySelectorAll('.editable-cell:not(.name-cell):not(.stat-slash-input)').forEach(input => {
+  tbody.querySelectorAll('.editable-cell:not(.name-cell):not(.stat-slash-input):not(.nivel-input)').forEach(input => {
     input.addEventListener('input', () => {
       const p = input.dataset.pokemon, f = input.dataset.field;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
@@ -10118,6 +10134,21 @@ function renderTableGO() {
       const p = input.dataset.pokemon, f = input.dataset.field;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
       dataGO[p][f] = formatted;
+    });
+  });
+  // Nivel (Liga Super/Ultra/Master): máximo 2 cifras enteras y, si hace falta,
+  // un decimal (24.5, 40, 50). Acepta coma o punto; se guarda siempre con punto.
+  tbody.querySelectorAll('.nivel-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const v = input.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+      const punto = v.indexOf('.');
+      const ent = (punto === -1 ? v : v.slice(0, punto)).slice(0, 2);
+      const formatted = punto === -1 ? ent : ent + '.' + v.slice(punto + 1).replace(/\./g, '').slice(0, 2);
+      input.value = formatted;
+      const p = input.dataset.pokemon, f = input.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = formatted;
+      autoguardarDatos('go');
     });
   });
   tbody.querySelectorAll('.move-type-select').forEach(select => {
@@ -12552,7 +12583,7 @@ function confirmBulkClear() {
   const modeLabel = MODE_TITLES[currentDatosMode] || currentDatosMode;
   const detalle = currentDatosMode === 'champions'
     ? `naturaleza, objeto, ataques y tipos (formato ${champDatosModo === 'doubles' ? 'Doubles' : 'Singles'})`
-    : 'CP, stats, movimientos y tipos (las ligas marcadas se mantienen)';
+    : 'nivel, CP, stats, movimientos y tipos (las ligas marcadas se mantienen)';
   if (!confirm(`¿Vaciar el contenido de ${names.length} Pokémon de ${modeLabel}?\n\nSe borrará: ${detalle}.\nLos Pokémon siguen en la lista. No se puede deshacer.`)) return;
   ejecutarBulkClear(names);
 }
