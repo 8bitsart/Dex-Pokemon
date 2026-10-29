@@ -3559,7 +3559,11 @@
   .visor-panel .visor-sobre-img { width: 140px; height: auto; max-height: 104px; max-width: 100%; object-fit: contain; }
   .visor-panel .visor-origen-nombre { font-size: 1.08rem; }
   .visor-origen-fila { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
-  .visor-booster-img { height: 104px; width: auto; max-width: 84px; object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
+  .visor-sobres { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 4px; }
+  .visor-booster-img { position: relative; height: 104px; width: auto; max-width: 84px; object-fit: contain; flex: 0 0 auto; transform-origin: 50% 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
+  /* Varios sobres: en abanico, superpuestos para que entren junto al logo */
+  .visor-sobres.multi .visor-booster-img { height: 88px; max-width: 66px; margin-left: -26px; }
+  .visor-sobres.multi .visor-booster-img:first-child { margin-left: 0; }
   .visor-panel .visor-origen-fila .visor-sobre-img { width: auto; max-width: 140px; max-height: 104px; flex: 0 1 auto; min-width: 0; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
@@ -10711,9 +10715,29 @@ function setCodeAIconoUrl(code) {
 }
 // Imagen del sobre (booster) de cada expansión, desde PocketDecks: images/png/packs/{código}-booster.png
 const POCKETDECKS_PACK_BASE = 'https://raw.githubusercontent.com/PocketDecks/pokemon-tcg-pocket-cards/main/images/png/packs';
-function sobreUrlDesdeIcono(iconoUrl) {
+// Archivos de sobres en PocketDecks. Si una expansión no figura acá se usa {código}-booster.
+const POCKETDECKS_SOBRES = {
+  a1:  ['a1-charizard', 'a1-mewtwo', 'a1-pikachu'],
+  a1a: ['a1a-mew'],
+  a2:  ['a2-dialga', 'a2-palkia'],
+  a2a: ['a2a-arceus'],
+  a3:  ['a3-lunala', 'a3-solgaleo'],
+  a4:  ['a4-ho-oh', 'a4-lugia'],
+  b1:  ['b1-megaaltaria', 'b1-megablaziken', 'b1-megagyarados'],
+  pa:  ['promo-a'],
+  pb:  ['promo-b']
+};
+// Devuelve el HTML de los sobres de la expansión (en abanico si tiene más de uno).
+function sobresHTMLDesdeIcono(iconoUrl) {
   const codigo = String(iconoUrl || '').split('/').pop().replace(/\.png$/i, '').toLowerCase();
-  return /^[a-z0-9]+$/.test(codigo) ? `${POCKETDECKS_PACK_BASE}/${codigo}-booster.png` : '';
+  if (!/^[a-z0-9]+$/.test(codigo)) return '';
+  const nombres = POCKETDECKS_SOBRES[codigo] || [`${codigo}-booster`];
+  const n = nombres.length;
+  const giros = n === 1 ? [0] : n === 2 ? [-6, 6] : [-8, 0, 8];
+  const imgs = nombres.map((nombre, i) =>
+    `<img src="${POCKETDECKS_PACK_BASE}/${nombre}.png" class="visor-booster-img" alt="" style="transform:rotate(${giros[i]}deg);z-index:${i === Math.floor((n - 1) / 2) ? 2 : 1}" onerror="this.style.display='none'">`
+  ).join('');
+  return `<div class="visor-sobres${n > 1 ? ' multi' : ''}">${imgs}</div>`;
 }
 document.addEventListener('error', function (e) {
   const el = e.target;
@@ -11147,7 +11171,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
-    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<div class="visor-origen-fila">${sobreUrlDesdeIcono(iconoExpansion) ? `<img src="${sobreUrlDesdeIcono(iconoExpansion)}" class="visor-booster-img" alt="" onerror="this.style.display='none'">` : ''}<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.parentNode.nextElementSibling; if (n) n.style.display=''"></div>` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
+    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<div class="visor-origen-fila">${sobresHTMLDesdeIcono(iconoExpansion)}<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.parentNode.nextElementSibling; if (n) n.style.display=''"></div>` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
     : '';
 
   return carta;
