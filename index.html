@@ -7372,6 +7372,7 @@ const EXPANSIONES_DEFAULT = [
   { name: 'Impulso Paradójico',       color: '#FF8C00' },
   { name: 'Maravillas Cotidianas',    color: '#66BB6A' },
   { name: 'Dominador de los Cielos',  color: '#4169E1' },
+  { name: 'Fusión Dual',              color: '#E8590C' },
   { name: 'Promo-A',                  color: '#888888' },
   { name: 'Promo-B',                  color: '#888888' }
 ];
@@ -7380,6 +7381,7 @@ const EXPANSIONES_DEFAULT = [
 // nombre oficial correcto. Se usa para migrar datos ya guardados sin perder
 // las cartas que el usuario ya haya cargado bajo el nombre viejo.
 const EXPANSIONES_MIGRACION = {
+  'dual fusion': 'Fusión Dual',
   'génesis genético': 'Genes Formidables',
   'isla mítica': 'La Isla Singular',
   'choque espaciotemporal': 'Pugna Espaciotemporal',
@@ -10615,6 +10617,7 @@ const TCG_SET_ES_MAP = {
   'paradox drive': 'Impulso Paradójico',
   'everyday wonders': 'Maravillas Cotidianas',
   'ruler of the skies': 'Dominador de los Cielos',
+  'dual fusion': 'Fusión Dual',
   "team rocket's ambition": 'Ambición del Team Rocket',
   'promo-a': 'Promo-A',
   'promo-b': 'Promo-B'
@@ -10651,6 +10654,7 @@ const EXPANSION_ES_A_CODIGO = {
   'impulso paradójico': 'b3a',
   'maravillas cotidianas': 'b3b',
   'dominador de los cielos': 'b4',
+  'fusión dual': 'c1',
   'ambición del team rocket': 'b4a',
   'promo-a': 'pa',
   'promo-b': 'pb'
@@ -13211,6 +13215,7 @@ const TCGDEX_SET_NAME_ES = {
   'B3a': 'Impulso Paradójico',
   'B3b': 'Maravillas Cotidianas',
   'B4':  'Dominador de los Cielos',
+  'C1':  'Fusión Dual',
   'Promo-A': 'Promo-A',
   'Promo-B': 'Promo-B'
 };
@@ -13255,7 +13260,8 @@ function normalizeFlibSetId(code) {
 
 async function fetchFlibustierSets() {
   const data = await fetchJson(FLIB_SETS_URL);
-  const todas = [...(Array.isArray(data.A) ? data.A : []), ...(Array.isArray(data.B) ? data.B : [])];
+  // Todas las series que traiga el archivo (A, B, C…), para no perder las expansiones nuevas.
+  const todas = Array.isArray(data) ? data : Object.values(data || {}).filter(Array.isArray).flat();
   return todas
     .filter(s => s && s.code && s.name && s.name.en)
     .map(s => ({ id: normalizeFlibSetId(s.code), name: s.name.en }));
