@@ -3558,6 +3558,9 @@
   .visor-panel .visor-origen { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 10px 16px; min-height: 0; }
   .visor-panel .visor-sobre-img { width: 140px; height: auto; max-height: 104px; max-width: 100%; object-fit: contain; }
   .visor-panel .visor-origen-nombre { font-size: 1.08rem; }
+  .visor-origen-fila { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
+  .visor-booster-img { height: 104px; width: auto; max-width: 84px; object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
+  .visor-panel .visor-origen-fila .visor-sobre-img { width: auto; max-width: 140px; max-height: 104px; flex: 0 1 auto; min-width: 0; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -10706,6 +10709,12 @@ const TCG_LOGOS_LOCAL = 'logos-expansiones';
 function setCodeAIconoUrl(code) {
   return code ? `${TCG_LOGOS_LOCAL}/${(code || '').toLowerCase()}.png` : '';
 }
+// Imagen del sobre (booster) de cada expansión, desde PocketDecks: images/png/packs/{código}-booster.png
+const POCKETDECKS_PACK_BASE = 'https://raw.githubusercontent.com/PocketDecks/pokemon-tcg-pocket-cards/main/images/png/packs';
+function sobreUrlDesdeIcono(iconoUrl) {
+  const codigo = String(iconoUrl || '').split('/').pop().replace(/\.png$/i, '').toLowerCase();
+  return /^[a-z0-9]+$/.test(codigo) ? `${POCKETDECKS_PACK_BASE}/${codigo}-booster.png` : '';
+}
 document.addEventListener('error', function (e) {
   const el = e.target;
   if (!el || el.tagName !== 'IMG' || el.dataset.logoRemoto) return;
@@ -11138,7 +11147,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
-    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.nextElementSibling; if (n) n.style.display=''">` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
+    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<div class="visor-origen-fila">${sobreUrlDesdeIcono(iconoExpansion) ? `<img src="${sobreUrlDesdeIcono(iconoExpansion)}" class="visor-booster-img" alt="" onerror="this.style.display='none'">` : ''}<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.parentNode.nextElementSibling; if (n) n.style.display=''"></div>` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
     : '';
 
   return carta;
