@@ -3558,13 +3558,6 @@
   .visor-panel .visor-origen { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 10px 16px; min-height: 0; }
   .visor-panel .visor-sobre-img { width: 140px; height: auto; max-height: 104px; max-width: 100%; object-fit: contain; }
   .visor-panel .visor-origen-nombre { font-size: 1.08rem; }
-  .visor-origen-fila { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
-  .visor-sobres { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 4px; }
-  .visor-booster-img { position: relative; height: 104px; width: auto; max-width: 84px; object-fit: contain; flex: 0 0 auto; transform-origin: 50% 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
-  /* Varios sobres: en abanico, superpuestos para que entren junto al logo */
-  .visor-sobres.multi .visor-booster-img { height: 88px; max-width: 66px; margin-left: -26px; }
-  .visor-sobres.multi .visor-booster-img:first-child { margin-left: 0; }
-  .visor-panel .visor-origen-fila .visor-sobre-img { width: auto; max-width: 140px; max-height: 104px; flex: 0 1 auto; min-width: 0; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -10717,32 +10710,6 @@ const TCG_LOGOS_LOCAL = 'logos-expansiones';
 function setCodeAIconoUrl(code) {
   return code ? `${TCG_LOGOS_LOCAL}/${(code || '').toLowerCase()}.png` : '';
 }
-// Imagen del sobre (booster) de cada expansión, desde PocketDecks: images/png/packs/{código}-booster.png
-const POCKETDECKS_PACK_BASE = 'https://raw.githubusercontent.com/PocketDecks/pokemon-tcg-pocket-cards/main/images/png/packs';
-// Archivos de sobres en PocketDecks. Si una expansión no figura acá se usa {código}-booster.
-const POCKETDECKS_SOBRES = {
-  a1:  ['a1-charizard', 'a1-mewtwo', 'a1-pikachu'],
-  a1a: ['a1a-mew'],
-  a2:  ['a2-dialga', 'a2-palkia'],
-  a2a: ['a2a-arceus'],
-  a3:  ['a3-lunala', 'a3-solgaleo'],
-  a4:  ['a4-ho-oh', 'a4-lugia'],
-  b1:  ['b1-megaaltaria', 'b1-megablaziken', 'b1-megagyarados'],
-  pa:  ['promo-a'],
-  pb:  ['promo-b']
-};
-// Devuelve el HTML de los sobres de la expansión (en abanico si tiene más de uno).
-function sobresHTMLDesdeIcono(iconoUrl) {
-  const codigo = String(iconoUrl || '').split('/').pop().replace(/\.png$/i, '').toLowerCase();
-  if (!/^[a-z0-9]+$/.test(codigo)) return '';
-  const nombres = POCKETDECKS_SOBRES[codigo] || [`${codigo}-booster`];
-  const n = nombres.length;
-  const giros = n === 1 ? [0] : n === 2 ? [-6, 6] : [-8, 0, 8];
-  const imgs = nombres.map((nombre, i) =>
-    `<img src="${POCKETDECKS_PACK_BASE}/${nombre}.png" class="visor-booster-img" alt="" style="transform:rotate(${giros[i]}deg);z-index:${i === Math.floor((n - 1) / 2) ? 2 : 1}" onerror="this.style.display='none'">`
-  ).join('');
-  return `<div class="visor-sobres${n > 1 ? ' multi' : ''}">${imgs}</div>`;
-}
 document.addEventListener('error', function (e) {
   const el = e.target;
   if (!el || el.tagName !== 'IMG' || el.dataset.logoRemoto) return;
@@ -11175,7 +11142,7 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const iconoExpansion = (esTrueque && carta.iconoUrl) ? carta.iconoUrl : iconoDeExpansionPorNombre(carta.expansion);
   const nombreExpansion = esc(carta.expansion || '');
   document.getElementById('carta-detalle-origen').innerHTML = (iconoExpansion || nombreExpansion)
-    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<div class="visor-origen-fila">${sobresHTMLDesdeIcono(iconoExpansion)}<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.parentNode.nextElementSibling; if (n) n.style.display=''"></div>` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
+    ? `<div class="visor-origen${esTrueque ? ' visor-origen-grande' : ''}" title="Sobre de origen: ${nombreExpansion}${iconoExpansion ? ' · archivo: ' + TCG_LOGOS_LOCAL + '/' + iconoExpansion.split('/').pop() : ''}">${iconoExpansion ? `<img src="${iconoExpansion}" class="visor-sobre-img" alt="" onerror="this.style.display='none'; var n=this.nextElementSibling; if (n) n.style.display=''">` : ''}<span class="visor-origen-nombre"${iconoExpansion ? ' style="display:none"' : ''}>${nombreExpansion}</span></div>`
     : '';
 
   return carta;
@@ -14642,9 +14609,10 @@ function trueqeRarezaCodigoBase(raw) {
   if (rombos === 1 || /one diamond|1 diamond|common|un diamante/.test(l)) return 'C';
   return '';
 }
-function trueqeEsPromo(setId) {
+function trueqeEsPromo(setId, nombre) {
   const k = trueqeSetKey(setId);
-  return k === 'pa' || k === 'pb' || /^promo/i.test(String(setId || ''));
+  // Promo de cualquier serie: pa, pb, pc, pc1, promo-c1, "P-C"… o cualquier expansión cuyo nombre diga "promo".
+  return /^p[a-z]\d*$/.test(k) || /^promo/.test(k) || /promo/i.test(String(nombre || ''));
 }
 function trueqeSim(code) { return TRUEQUE_RAREZAS[code] ? TRUEQUE_RAREZAS[code].sim : '?'; }
 function trueqePolvoHtml(n) {
@@ -14781,11 +14749,11 @@ async function trueqeBuildCardIndex() {
   if (!sets.length && !groups.size) complete = false;
 
   // Expansiones: las de la API y las que solo conoce PocketDecks (las más nuevas). Las promo no se cambian.
-  const lista = sets.filter(x => !trueqeEsPromo(x.id)).map(x => ({ id: x.id, name: x.name, logo: x.logo || '', api: true }));
+  const lista = sets.filter(x => !trueqeEsPromo(x.id, x.name)).map(x => ({ id: x.id, name: x.name, logo: x.logo || '', api: true }));
   const clavesApi = new Set(lista.map(x => trueqeSetKey(x.id)));
   const nombres = new Set(lista.map(x => TCGDEX_SET_NAME_ES[x.id] || TCGDEX_SET_NAME_ES[x.name] || x.name));
   groups.forEach((g, key) => {
-    if (clavesApi.has(key) || trueqeEsPromo(g.code)) return;
+    if (clavesApi.has(key) || trueqeEsPromo(g.code, g.name)) return;
     const nombreEs = traducirExpansionTcgApi(g.name) || g.name || g.code;
     if (nombres.has(nombreEs)) return;
     nombres.add(nombreEs);
