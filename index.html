@@ -477,6 +477,8 @@
     position: relative;
     text-align: center;
     cursor: pointer;
+    touch-action: manipulation;          /* el doble toque no hace zoom */
+    -webkit-user-select: none; user-select: none;
     border: 2px solid transparent;
     border-radius: 8px;
     padding: 3px;
@@ -3529,7 +3531,7 @@
   .trueque-costo .cr-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); font-weight: 800; }
   .trade-mini.clickable { cursor: pointer; transition: transform .12s; }
   .trade-mini.clickable:hover { transform: translateY(-2px); }
-  .trueque-chip .chip-ver { cursor: pointer; display: flex; }
+  .trueque-chip .chip-ver { display: flex; }
   .tgo-panel .tp-hint { font-size: 0.72rem; color: var(--muted); margin: -2px 0 6px; }
   .tgo-panel .tp-ver { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 0.72rem; }
   .tgo-panel .tp-ver:hover { background: rgba(255,255,255,0.08); }
@@ -3547,7 +3549,7 @@
   .tgo-tile .t-rar { display: flex; justify-content: center; margin-top: 2px; }
   .carta-nombre-rareza { display: inline-flex; align-items: center; margin-left: 8px; vertical-align: middle; }
   .carta-nombre-rareza .tcg-rareza-img { height: 18px; }
-  .trueque-dd-item.locked { opacity: 0.5; filter: grayscale(0.6); cursor: not-allowed; position: relative; }
+  .trueque-dd-item.locked { opacity: 0.5; filter: grayscale(0.6); cursor: pointer; position: relative; }
   .trueque-dd-item .dd-lock { position: absolute; top: 4px; right: 6px; z-index: 2; font-size: 0.85rem; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
   .dd-rar-sel { max-width: 100%; margin-top: 3px; font-size: 0.66rem; background: #1b1e26; color: #fff; border: 1px solid rgba(255,215,94,0.6); border-radius: 5px; padding: 2px 3px; }
   /* Botón «Actualizar cartas»: mismo diseño y tipografía que «Cambiar modo», ajustado a la fila del título */
@@ -15260,13 +15262,59 @@ function trueqePickerRender(side) {
   const aviso = (req && req.rar && TRUEQUE_RAREZAS[req.rar])
     ? `<div class="trueque-req-note">Solo cartas de rareza ${rarezaIconosHtml(req.rar)}, para cambiar por la carta ${req.idx + 1} del otro lado.${trueqeAdminUnlocked ? ' (Como administrador también ves las que no tienen rareza, para corregirlas.)' : ''} Costo: ${trueqePolvoHtml(TRUEQUE_RAREZAS[req.rar].costo)}</div>` : '';
   grid.innerHTML = aviso + (view.length ? view.map((c, i) => `
-    <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' locked' : ''}" title="${trueqeEsc(c.name)}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' · no se puede cambiar' : ''}" onclick="trueqePickerToggleCard('${side}', ${i}, this)">
+    <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' locked' : ''}" title="${trueqeEsc(c.name)}${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? ' · no se puede cambiar' : ''}" onclick="trueqePickerClick('${side}', ${i}, this)">
       ${TRUEQUE_NO_CAMBIABLES.includes(c.rarity) ? '<span class="dd-lock" aria-hidden="true">🔒</span>' : ''}
       ${trueqeImgHtml(c, true)}
       <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}${(trueqeAdminUnlocked && (!c.rarity || c.rar0 !== undefined)) ? ' ' + trueqeSelectRarezaHtml(c) : (c.rarity ? ` <span class="dd-rar">${rarezaIconosHtml(c.rarity)}</span>` : ' <span class="dd-rar" title="Rareza sin identificar">?</span>')}</div>
     </div>
   `).join('') : `<div class="trueque-autocomplete-empty" style="grid-column:1/-1">${req && req.rar ? 'No hay cartas de esa rareza en esta expansión.' : 'No hay cartas con ese nombre en esta expansión.'}</div>`);
   grid.scrollTop = scroll;
+}
+
+// Un toque en una carta del selector la agrega o la saca del cambio (como siempre). Un doble toque / doble
+// clic la abre en grande con la animación del visor, también las de 3 estrellas y corona aunque estén bloqueadas.
+// Para distinguirlos, el toque simple se aplica unos instantes después, si no llega un segundo toque.
+const TRUEQUE_DOBLE_TOQUE_MS = 260;
+let trueqeToquePend = null;   // { key, side, card, t }
+
+function trueqePickerEjecutarToggle(side, card) {
+  // La lista puede haberse redibujado entre tanto: se vuelve a ubicar la carta por su clave.
+  const view = trueqePickerView[side] || [];
+  const j = view.findIndex(c => trueqeCardKey(c) === trueqeCardKey(card));
+  if (j < 0) return;
+  const el = document.querySelectorAll('#trueque-dd-grid-' + side + ' .trueque-dd-item')[j] || null;
+  trueqePickerToggleCard(side, j, el);
+}
+
+function trueqePickerAbrirVisor(side, card, el) {
+  const view = trueqePickerView[side] || [];
+  const j = view.findIndex(c => trueqeCardKey(c) === trueqeCardKey(card));
+  if (j < 0) { trueqeAbrirVisor(trueqeRegVisor(card), el); return; }
+  const reg = trueqeRegLista(view);          // permite pasar de una carta a otra con ‹ › dentro de la expansión
+  trueqeAbrirVisor(reg.ids[j], el, reg.ctx, j);
+}
+
+function trueqePickerClick(side, i, el) {
+  const card = (trueqePickerView[side] || [])[i];
+  if (!card) return;
+  const key = side + '|' + trueqeCardKey(card);
+  const p = trueqeToquePend;
+  if (p && p.key === key) {                  // segundo toque sobre la misma carta: abrirla, sin cambiar la selección
+    clearTimeout(p.t);
+    trueqeToquePend = null;
+    trueqePickerAbrirVisor(side, card, el);
+    return;
+  }
+  if (p) {                                   // se tocó otra carta: el toque anterior ya era un toque simple
+    clearTimeout(p.t);
+    trueqeToquePend = null;
+    trueqePickerEjecutarToggle(p.side, p.card);
+  }
+  const t = setTimeout(() => {
+    trueqeToquePend = null;
+    trueqePickerEjecutarToggle(side, card);
+  }, TRUEQUE_DOBLE_TOQUE_MS);
+  trueqeToquePend = { key, side, card, t };
 }
 
 function trueqePickerToggleCard(side, i, el) {
@@ -15323,7 +15371,7 @@ function trueqeRenderChosen(side) {
     return `
     <div class="trueque-chip${mal ? ' mismatch' : ''}">
       <span class="chip-n">${i + 1}</span>
-      <span class="chip-ver" onclick="trueqeAbrirVisor('${trueqeRegVisor(c)}', this)" title="Ver la carta en grande">${trueqeImgHtml(c, false, 'thumb')}</span>
+      <span class="chip-ver">${trueqeImgHtml(c, false, 'thumb')}</span>
       <div>
         <div class="chip-name">${trueqeEsc(c.name)} ${c.rarity ? `<span class="chip-rar">${rarezaIconosHtml(c.rarity)}</span>` : ''}</div>
         <div class="chip-set">${trueqeSetBadgeHtml(c.setLogo, c.setId)}${trueqeEsc(c.setName)}</div>
