@@ -10584,7 +10584,7 @@ const TCGDEX_CACHE_KEY = 'tcgdexIndiceCacheV1';
 const TCGDEX_CACHE_MS = 1000 * 60 * 60 * 24; // 1 día
 
 const POCKETDECKS_BASE = 'https://raw.githubusercontent.com/PocketDecks/pokemon-tcg-pocket-cards/main/data/v5';
-const POCKETDECKS_CACHE_KEY = 'pocketDecksCardsCacheV2';   // V2: ahora guarda también card_text y ability
+const POCKETDECKS_CACHE_KEY = 'pocketDecksCardsCacheV3';   // V2: ahora guarda también card_text y ability
 const POCKETDECKS_CACHE_MS = 1000 * 60 * 60 * 24; // 1 día
 
 // Orden oficial de expansiones (coincide con el orden de EXPANSIONES_DEFAULT).
@@ -10812,23 +10812,37 @@ async function cargarCartasPocketDecks(forzar) {
     const collectionData = await collectionRes.json();
     const gameplayArr = Array.isArray(gameplayData) ? gameplayData : (gameplayData.cards || []);
     const collectionArr = Array.isArray(collectionData) ? collectionData : (collectionData.cards || []);
-    const collectionById = {};
-    collectionArr.forEach(c => { collectionById[c.id] = c; });
-    const merged = gameplayArr.map(c => {
-      const col = collectionById[c.id] || {};
+    // La base es la colección (todas las cartas impresas de cada expansión); los datos de juego
+    // (ataques, tipo, texto) se le suman cuando existen. Así una expansión nueva no queda incompleta
+    // si todavía no está en cards.gameplay.json.
+    const gameplayById = {};
+    gameplayArr.forEach(c => { gameplayById[c.id] = c; });
+    const idsEnColeccion = new Set();
+    const merged = collectionArr.map(col => {
+      idsEnColeccion.add(col.id);
+      const c = gameplayById[col.id] || gameplayById[col.gameplay_id] || gameplayById[col.card_id] || {};
       return {
-        id: c.id,
-        name: c.name,
-        attacks: c.attacks || {},
-        type: c.type || '',
-        subtype: c.subtype || '',
-        card_text: c.card_text || '',
-        ability: c.ability || null,
+        id: col.id,
+        name: col.name || c.name || '',
+        attacks: c.attacks || col.attacks || {},
+        type: c.type || col.type || '',
+        subtype: c.subtype || col.subtype || '',
+        card_text: c.card_text || col.card_text || '',
+        ability: c.ability || col.ability || null,
         rarity: col.rarity || '',
         image_png: col.image_png || '',
         set_code: col.set_code || (c.set_code || ''),
         set_name: col.set_name || ''
       };
+    });
+    // Cartas que solo figuran en gameplay: se conservan como antes.
+    gameplayArr.forEach(c => {
+      if (idsEnColeccion.has(c.id)) return;
+      merged.push({
+        id: c.id, name: c.name, attacks: c.attacks || {}, type: c.type || '', subtype: c.subtype || '',
+        card_text: c.card_text || '', ability: c.ability || null,
+        rarity: '', image_png: '', set_code: c.set_code || '', set_name: ''
+      });
     });
     pocketDecksCartas = merged;
     try { localStorage.setItem(POCKETDECKS_CACHE_KEY, JSON.stringify({ ts: Date.now(), cards: merged })); } catch (e) {}
@@ -14507,7 +14521,7 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v13';
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v14';
 try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); localStorage.removeItem('trueque_card_index_v7'); localStorage.removeItem('trueque_card_index_v8'); localStorage.removeItem('trueque_card_index_v9'); localStorage.removeItem('trueque_card_index_v10'); localStorage.removeItem('trueque_card_index_v11'); localStorage.removeItem('trueque_card_index_v12'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
