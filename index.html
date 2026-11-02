@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>8 Bits - Buscador Pokémon</title>
+<meta name="description" content="Consulta tiers y mazos de tus Pokémon favoritos, datos de Pokémon GO e intercambios de cartas de Pokémon TCG Pocket.">
+<link rel="canonical" href="https://8bitsart.github.io/Dex-Pokemon/">
+<!-- Vista previa al compartir el link (WhatsApp, Discord, Telegram, Facebook, X) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="8-Bits Pokédex">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="8-Bits Pokédex · Buscador Pokémon">
+<meta property="og:description" content="Consulta tiers y mazos de tus Pokémon favoritos, datos de Pokémon GO e intercambios de cartas de Pokémon TCG Pocket.">
+<meta property="og:url" content="https://8bitsart.github.io/Dex-Pokemon/">
+<meta property="og:image" content="https://8bitsart.github.io/Dex-Pokemon/preview.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="8-Bits Pokédex: buscador Pokémon con Champions, GO y TCGP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="8-Bits Pokédex · Buscador Pokémon">
+<meta name="twitter:description" content="Consulta tiers y mazos de tus Pokémon favoritos, datos de Pokémon GO e intercambios de cartas de Pokémon TCG Pocket.">
+<meta name="twitter:image" content="https://8bitsart.github.io/Dex-Pokemon/preview.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#101114">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3646,6 +3664,14 @@
   .legacy-check-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8rem; color: var(--yellow); font-weight: 700; cursor: pointer; }
   .legacy-alt-row { margin-top: 4px; }
 </style>
+<style>
+  .fan-aviso { max-width: 760px; margin: 28px auto 24px; padding: 14px 16px 0; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.72rem; line-height: 1.55; color: #9AA0AC; }
+  .fan-aviso p { margin: 0 0 6px; }
+  .fan-aviso strong { color: #c9ccd3; }
+  .fan-aviso a { color: #FF8A1F; text-decoration: none; }
+  .fan-aviso a:hover, .fan-aviso a:focus-visible { text-decoration: underline; }
+  .fan-aviso-gate { max-width: 300px; margin: 14px auto 0; text-align: center; font-size: 0.64rem; line-height: 1.45; color: #8b909b; flex-shrink: 0; }
+</style>
 </head>
 <body>
 
@@ -3673,6 +3699,7 @@
         <span>Solicitar usuario nuevo</span>
         <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTE3LjQ3MiAxNC4zODJjLS4yOTctLjE0OS0xLjc1OC0uODY3LTIuMDMtLjk2Ny0uMjczLS4wOTktLjQ3MS0uMTQ4LS42Ny4xNS0uMTk3LjI5Ny0uNzY3Ljk2Ni0uOTQgMS4xNjQtLjE3My4xOTktLjM0Ny4yMjMtLjY0NC4wNzUtLjI5Ny0uMTUtMS4yNTUtLjQ2My0yLjM5LTEuNDc1LS44ODMtLjc4OC0xLjQ4LTEuNzYxLTEuNjUzLTIuMDU5LS4xNzMtLjI5Ny0uMDE4LS40NTguMTMtLjYwNi4xMzQtLjEzMy4yOTgtLjM0Ny40NDYtLjUyLjE0OS0uMTc0LjE5OC0uMjk4LjI5OC0uNDk3LjA5OS0uMTk4LjA1LS4zNzEtLjAyNS0uNTItLjA3NS0uMTQ5LS42NjktMS42MTItLjkxNi0yLjIwNy0uMjQyLS41NzktLjQ4Ny0uNS0uNjY5LS41MS0uMTczLS4wMDgtLjM3MS0uMDEtLjU3LS4wMS0uMTk4IDAtLjUyLjA3NC0uNzkyLjM3Mi0uMjcyLjI5Ny0xLjA0IDEuMDE2LTEuMDQgMi40NzkgMCAxLjQ2MiAxLjA2NSAyLjg3NSAxLjIxMyAzLjA3NC4xNDkuMTk4IDIuMDk2IDMuMiA1LjA3NyA0LjQ4Ny43MDkuMzA2IDEuMjYyLjQ4OSAxLjY5NC42MjUuNzEyLjIyNyAxLjM2LjE5NSAxLjg3MS4xMTguNTcxLS4wODUgMS43NTgtLjcxOSAyLjAwNi0xLjQxMy4yNDgtLjY5NC4yNDgtMS4yODkuMTczLTEuNDEzLS4wNzQtLjEyNC0uMjcyLS4xOTgtLjU3LS4zNDd6Ii8+PHBhdGggZD0iTTEyLjAwMSAyQzYuNDc4IDIgMiA2LjQ3OCAyIDEyYzAgMS44Ny41MDUgMy42MjIgMS4zODYgNS4xM0wyIDIybDQuOTk5LTEuMzUyQTkuOTM2IDkuOTM2IDAgMCAwIDEyLjAwMSAyMkMxNy41MjMgMjIgMjIgMTcuNTIzIDIyIDEyUzE3LjUyMyAyIDEyLjAwMSAyem0wIDE4LjE0YTguMTEgOC4xMSAwIDAgMS00LjE0LTEuMTM1bC0uMjk3LS4xNzYtMy4wOS44MzYuODI2LTMuMDE2LS4xOTQtLjMxQTguMTE2IDguMTE2IDAgMSAxIDIwLjEzIDEyYTguMTQgOC4xNCAwIDAgMS04LjEzIDguMTR6Ii8+PC9zdmc+Cg==" alt="WhatsApp" class="whatsapp-logo-img">
       </a>
+  <p class="fan-aviso-gate">Proyecto de fans sin fines de lucro, sin relación con Nintendo, Game Freak, Creatures, The Pokémon Company ni Niantic. Pokémon y sus nombres, imágenes y marcas pertenecen a sus respectivos dueños.</p>
 </div>
 
 <!-- HEADER -->
@@ -4278,6 +4305,12 @@
   </div>
 
 </div><!-- /main -->
+
+<!-- AVISO FAN PROJECT -->
+<footer class="fan-aviso">
+  <p><strong>Proyecto de fans sin fines de lucro.</strong> Esta página no está afiliada, patrocinada ni respaldada por Nintendo, Game Freak, Creatures, The Pokémon Company ni Niantic. Pokémon y sus nombres, imágenes, cartas y marcas pertenecen a sus respectivos dueños.</p>
+  <p>Datos de cartas: <a href="https://tcgdex.dev" target="_blank" rel="noopener noreferrer">TCGdex</a>, <a href="https://github.com/PocketDecks/pokemon-tcg-pocket-cards" target="_blank" rel="noopener noreferrer">PocketDecks</a> y <a href="https://github.com/flibustier/pokemon-tcg-pocket-database" target="_blank" rel="noopener noreferrer">flibustier</a>. Datos de combate de Pokémon GO: <a href="https://pvpoke.com" target="_blank" rel="noopener noreferrer">PvPoke</a>.</p>
+</footer>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
