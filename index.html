@@ -4191,6 +4191,11 @@
         <h3 class="trueque-titulo-fila">Publicar intercambio <button type="button" class="btn btn-pixel-amarillo btn-contorno btn-actualizar-cartas" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">Actualizar cartas</button></h3>
         <div id="trueque-rar-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e"></div>
         <div id="trueque-img-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e;text-align:left;line-height:1.55"></div>
+        <details id="trueque-nombres-panel" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;text-align:left">
+          <summary style="cursor:pointer;color:#ffd75e"><b>Nombres de las expansiones</b></summary>
+          <div style="margin:6px 0;line-height:1.5">Escribí el nombre en castellano y tocá fuera del campo para guardarlo. Se ve en todos tus dispositivos. El gris es el nombre original; dejá el campo vacío para volver a él.</div>
+          <div id="trueque-nombres-lista"></div>
+        </details>
         <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
           <div class="trueque-side-title">Qué busco</div>
@@ -5135,6 +5140,9 @@ let NOMBRES_MOSTRAR = {};
 // Tamaño con que se muestra cada GIF propio: { 'pikachu': 1.2, ... } (1 = 100 %). Se edita desde
 // Datos → «📋 Lista de GIF» y se sincroniza con la nube para que todos lo vean igual.
 let GIF_ESCALAS = {};
+// Nombres de expansiones escritos a mano por el administrador desde Intercambios → Admin:
+// { 'sp1': 'Nombre en español', ... }. Mandan sobre los nombres de las tablas y de las fuentes.
+let NOMBRES_EXPANSIONES = {};
 
 function claveNombre(n) {
   return (n || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -7605,6 +7613,9 @@ try {
 try {
   Object.assign(GIF_ESCALAS, JSON.parse(localStorage.getItem('gifEscalas') || '{}'));
 } catch (e) {}
+try {
+  Object.assign(NOMBRES_EXPANSIONES, JSON.parse(localStorage.getItem('nombresExpansiones') || '{}'));
+} catch (e) {}
 
 // Orden manual de Pokémon dentro de cada liga de Pokémon GO (Super/Ultra/
 // Master), definido desde el panel Datos. Es un objeto { 'Liga Super':
@@ -9884,6 +9895,7 @@ function persistLocalOnly() {
   localStorage.setItem('modosEnReparacion', JSON.stringify(modosEnReparacion));
   localStorage.setItem('nombresMostrar', JSON.stringify(NOMBRES_MOSTRAR));
   localStorage.setItem('gifEscalas', JSON.stringify(GIF_ESCALAS));
+  localStorage.setItem('nombresExpansiones', JSON.stringify(NOMBRES_EXPANSIONES));
   localStorage.setItem('pokemonLigaOrderGO', JSON.stringify(ligaOrder));
 }
 
@@ -9960,6 +9972,11 @@ function applyConfigDoc(doc) {
   if (nombresMostrar && typeof nombresMostrar === 'object') NOMBRES_MOSTRAR = nombresMostrar;
   const gifEscalas = parseSnapField(doc.gifEscalas);
   if (gifEscalas && typeof gifEscalas === 'object' && !Array.isArray(gifEscalas)) GIF_ESCALAS = gifEscalas;
+  const nombresExp = parseSnapField(doc.nombresExpansiones);
+  if (nombresExp && typeof nombresExp === 'object' && !Array.isArray(nombresExp)) {
+    NOMBRES_EXPANSIONES = nombresExp;
+    try { trueqeAplicarNombresManualesYRefrescar(); } catch (e) { /* Intercambios todavía no cargó */ }
+  }
 }
 
 function applyExpansionesDoc(doc) {
@@ -10017,7 +10034,7 @@ function payloadsFirestore() {
     tcg: { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg },
     mazos: { mazos: JSON.stringify(dataMazos) },
     expansiones: { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) },
-    config: { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR), gifEscalas: JSON.stringify(GIF_ESCALAS) }
+    config: { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR), gifEscalas: JSON.stringify(GIF_ESCALAS), nombresExpansiones: JSON.stringify(NOMBRES_EXPANSIONES) }
   };
 }
 
@@ -13277,6 +13294,7 @@ const TCGDEX_SET_NAME_ES = {
   'B3a': 'Impulso Paradójico',
   'B3b': 'Maravillas Cotidianas',
   'B4':  'Dominador de los Cielos',
+  'B4a': 'Ambición del Team Rocket',
   'C1':  'Fusión Dual',
   'Promo-A': 'Promo-A',
   'Promo-B': 'Promo-B'
@@ -14604,7 +14622,7 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v14';
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v15';
 try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); localStorage.removeItem('trueque_card_index_v7'); localStorage.removeItem('trueque_card_index_v8'); localStorage.removeItem('trueque_card_index_v9'); localStorage.removeItem('trueque_card_index_v10'); localStorage.removeItem('trueque_card_index_v11'); localStorage.removeItem('trueque_card_index_v12'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
@@ -14848,7 +14866,7 @@ async function trueqeBuildCardIndex() {
   // Expansiones: las de la API y las que solo conoce PocketDecks (las más nuevas). Las promo no se cambian.
   const lista = sets.filter(x => !trueqeEsPromo(x.id, x.name)).map(x => ({ id: x.id, name: x.name, logo: x.logo || '', api: true }));
   const clavesApi = new Set(lista.map(x => trueqeSetKey(x.id)));
-  const nombres = new Set(lista.map(x => TCGDEX_SET_NAME_ES[x.id] || TCGDEX_SET_NAME_ES[x.name] || x.name));
+  const nombres = new Set(lista.map(x => trueqeNombreExpansion(x)));
   groups.forEach((g, key) => {
     if (clavesApi.has(key) || trueqeEsPromo(g.code, g.name)) return;
     const nombreEs = traducirExpansionTcgApi(g.name) || g.name || g.code;
@@ -14863,7 +14881,7 @@ async function trueqeBuildCardIndex() {
   const marcarExcl = (id, n) => { if (!excluidas.has(id)) excluidas.set(id, []); excluidas.get(id).push(n); };
 
   for (const s of lista) {
-    const setNameEs = s.nombreEs || TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
+    const setNameEs = trueqeNombreExpansion(s);
     const key = trueqeSetKey(s.id);
     const porNum = new Map();
     const poner = (num, datos) => {
@@ -14944,7 +14962,7 @@ async function trueqeBuildCardIndex() {
     for (let n = 1; n <= max; n++) if (!set.has(n)) huecos.push(n);
     return {
       id: s.id,
-      nombre: s.nombreEs || TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name,
+      nombre: trueqeNombreExpansion(s),
       total: final.filter(c => c.setId === s.id).length,
       excl: trueqeRangos(final.filter(c => c.setId === s.id && TRUEQUE_NO_CAMBIABLES.includes(c.rarity)).map(c => parseInt(c.localId, 10))),
       huecos: trueqeRangos(huecos)
@@ -14953,6 +14971,12 @@ async function trueqeBuildCardIndex() {
   return { index: final, complete };
 }
 let TRUEQUE_REPORTE = [];
+// Nombre con que se muestra una expansión en Intercambios: el que dio la fuente en español, el de la tabla por
+// código (TCGDEX_SET_NAME_ES), el de la tabla por nombre en inglés (TCG_SET_ES_MAP) y, si no hay ninguno,
+// el que trae la fuente (en inglés).
+function trueqeNombreExpansion(s) {
+  return s.nombreEs || TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || traducirExpansionTcgApi(s.name) || s.name;
+}
 let TRUEQUE_RAR_OCULTAS = 0;
 
 async function trueqeGetCardIndex() {
@@ -14964,6 +14988,7 @@ async function trueqeGetCardIndex() {
     const cached = JSON.parse(localStorage.getItem(TRUEQUE_CARD_INDEX_CACHE_KEY) || 'null');
     if (cached && Array.isArray(cached.data) && cached.data.length && (Date.now() - cached.ts) < TRUEQUE_CARD_INDEX_MAX_AGE) {
       TRUEQUE_CARD_INDEX = cached.data;
+      trueqeAplicarNombresManuales();
       TRUEQUE_REPORTE = Array.isArray(cached.rep) ? cached.rep : [];
       TRUEQUE_RAR_OCULTAS = cached.data.filter(c => !c.rarity).length;
       return TRUEQUE_CARD_INDEX;
@@ -14981,6 +15006,7 @@ async function trueqeGetCardIndex() {
           localStorage.setItem(TRUEQUE_CARD_INDEX_CACHE_KEY, JSON.stringify({ ts, data: index, rep: TRUEQUE_REPORTE }));
         } catch (e) { /* si no entra en localStorage, no pasa nada grave */ }
       }
+      trueqeAplicarNombresManuales();   // después de guardar el caché, que conserva siempre el nombre original
       return index;
     })
     .catch(e => {
@@ -15182,6 +15208,7 @@ async function trueqeAdminSetRareza(sel) {
 function trueqeRefrescarVistaRarezas() {
   trueqeMostrarAviso();
   trueqeAuditarImagenesPropias(false);
+  trueqeDibujarPanelNombres();
   ['busca', 'ofrece'].forEach(sd => {
     const pnl = document.getElementById('trueque-dd-panel-' + sd);
     if (pnl && pnl.style.display !== 'none') trueqePickerRender(sd);
@@ -15275,6 +15302,75 @@ function trueqeDibujarAvisoImagenes() {
   el.style.display = '';
   el.innerHTML = `<div style="margin-bottom:6px"><b>Imágenes de la carpeta «${TRUEQUE_CARPETA_LOCAL}»</b></div>` + partes.join('') +
     `<div style="margin-top:8px"><button type="button" class="btn btn-pixel-amarillo btn-contorno" onclick="trueqeAuditarImagenesPropias(true)">Volver a revisar</button></div>`;
+}
+
+// ── Nombres de expansiones escritos a mano (modo administrador) ──
+// Cada carta del índice conserva su nombre original en setNameBase; el nombre que se muestra (setName)
+// es el escrito a mano si existe y, si no, el original. Vaciar el campo vuelve al nombre original.
+function trueqeAplicarNombresManuales() {
+  if (!TRUEQUE_CARD_INDEX) return false;
+  let cambio = false;
+  TRUEQUE_CARD_INDEX.forEach(c => {
+    if (c.setNameBase === undefined) c.setNameBase = c.setName;
+    const manual = String(NOMBRES_EXPANSIONES[trueqeSetKey(c.setId)] || '').trim();
+    const nombre = manual || c.setNameBase;
+    if (c.setName !== nombre) { c.setName = nombre; cambio = true; }
+  });
+  return cambio;
+}
+
+// Aplica los nombres manuales y, si el selector ya está armado, lo actualiza sin perder lo que se había elegido.
+function trueqeAplicarNombresManualesYRefrescar() {
+  if (!TRUEQUE_CARD_INDEX) return;
+  const antes = trueqeSets.map(st => ({ name: st.name, key: trueqeSetKey(st.setId) }));
+  const cambio = trueqeAplicarNombresManuales();
+  if (cambio && trueqePickersReady) {
+    trueqeSets.forEach(st => {
+      const c = TRUEQUE_CARD_INDEX.find(x => trueqeSetKey(x.setId) === trueqeSetKey(st.setId));
+      if (c) st.name = c.setName;
+    });
+    ['busca', 'ofrece'].forEach(side => {
+      const inp = document.getElementById('trueque-exp-' + side);
+      if (!inp) return;
+      const previa = antes.find(x => x.name === inp.value);
+      if (previa) {
+        const nueva = trueqeSets.find(st => trueqeSetKey(st.setId) === previa.key);
+        if (nueva) { inp.value = nueva.name; trueqeExpSetLabel(side, nueva.name); }
+      }
+      trueqeExpRenderList(side);
+    });
+    trueqeRefrescarVistaRarezas();
+  }
+  trueqeDibujarPanelNombres();
+}
+
+function trueqeGuardarNombreExpansion(key, valor) {
+  const v = String(valor || '').trim().slice(0, 80);
+  if (v) NOMBRES_EXPANSIONES[key] = v; else delete NOMBRES_EXPANSIONES[key];
+  persistAll();
+  trueqeAplicarNombresManualesYRefrescar();
+  showToast(v ? 'Nombre guardado' : 'Se volvió al nombre original');
+}
+
+function trueqeDibujarPanelNombres() {
+  const caja = document.getElementById('trueque-nombres-panel');
+  const lista = document.getElementById('trueque-nombres-lista');
+  if (!caja || !lista) return;
+  if (!trueqeAdminUnlocked || !TRUEQUE_CARD_INDEX) { caja.style.display = 'none'; return; }
+  caja.style.display = '';
+  if (lista.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;   // no pisar lo que se está escribiendo
+  const vistos = new Map();
+  TRUEQUE_CARD_INDEX.forEach(c => {
+    const k = trueqeSetKey(c.setId);
+    if (!vistos.has(k)) vistos.set(k, { k, id: c.setId, base: c.setNameBase !== undefined ? c.setNameBase : c.setName });
+  });
+  lista.innerHTML = [...vistos.values()].reverse().map(e => `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid rgba(255,255,255,0.1)">
+      <b style="flex:0 0 52px">${trueqeEsc(String(e.id))}</b>
+      <input class="trueque-input" style="flex:1 1 200px;margin:0" type="text" maxlength="80"
+        value="${trueqeEsc(NOMBRES_EXPANSIONES[e.k] || '')}" placeholder="${trueqeEsc(e.base)}"
+        onchange="trueqeGuardarNombreExpansion('${trueqeEsc(e.k)}', this.value)">
+    </div>`).join('');
 }
 
 let trueqeSets = []; // [{ name, logo }]
