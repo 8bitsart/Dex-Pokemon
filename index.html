@@ -3690,6 +3690,16 @@
   html[data-modo="tcg"]       { --yellow: #EF4B4B; --dark-yellow: #B83232; }
   /* La marca de la página sigue siempre en naranja */
   html[data-modo] .site-title-8bits { color: #FF8A1F; }
+
+  /* Pestañas de Torneos y filtros de Intercambios: mismo formato y color que «Cambiar modo» */
+  .torneo-tab-btn, .trueque-filters button {
+    font-family: 'Press Start 2P', monospace; font-size: 0.6rem; font-weight: 400; line-height: 1.4;
+    color: var(--yellow); background: transparent; border: 1px solid var(--yellow); border-radius: 8px;
+    padding: 8px 18px; transition: background 0.15s, color 0.15s;
+  }
+  .torneo-tab-btn:hover, .torneo-tab-btn.active, .trueque-filters button:hover, .trueque-filters button.active {
+    background: var(--yellow); color: var(--black);
+  }
 </style>
 </head>
 <body>
@@ -4089,13 +4099,13 @@
     <div id="torneo-game-select" class="torneo-game-select">
       <div class="torneo-game-title">¿Torneo de qué juego?</div>
       <div class="mode-select-grid">
-        <button class="mode-card" onclick="selectTorneoGame('champions')">
+        <button class="mode-card mode-champions" onclick="selectTorneoGame('champions')">
           <img id="torneo-logo-champions" class="mode-logo" alt="Champions">
         </button>
-        <button class="mode-card" onclick="selectTorneoGame('go')">
+        <button class="mode-card mode-go" onclick="selectTorneoGame('go')">
           <img id="torneo-logo-go" class="mode-logo" alt="Pokémon GO">
         </button>
-        <button class="mode-card" onclick="selectTorneoGame('tcg')">
+        <button class="mode-card mode-tcg" onclick="selectTorneoGame('tcg')">
           <img id="torneo-logo-tcg" class="mode-logo" alt="TCG Pocket">
         </button>
       </div>
@@ -4103,21 +4113,21 @@
 
     <div id="torneo-body" class="torneo-body" style="display:none">
       <div class="torneo-header">
-        <button class="btn" style="background:#444;color:#fff" onclick="backToTorneoGameSelect()">◀ Cambiar juego</button>
+        <button class="btn btn-pixel-amarillo btn-contorno" onclick="backToTorneoGameSelect()">Cambiar juego</button>
         <div class="torneo-header-title" id="torneo-header-title"></div>
-        <button class="btn" id="torneo-admin-btn" style="margin-left:auto;padding:6px 12px;font-size:0.78rem" onclick="torneoAdminToggle()">🔑 Admin</button>
+        <button class="btn btn-pixel-amarillo btn-contorno" id="torneo-admin-btn" style="margin-left:auto" onclick="torneoAdminToggle()">Admin</button>
       </div>
 
       <div class="torneo-tabs">
-        <button class="torneo-tab-btn active" id="torneotab-participantes" onclick="showTorneoTab('participantes')">👥 Participantes</button>
-        <button class="torneo-tab-btn" id="torneotab-grupos" onclick="showTorneoTab('grupos')">🗂️ Grupos</button>
-        <button class="torneo-tab-btn" id="torneotab-eliminatorias" onclick="showTorneoTab('eliminatorias')">🏅 Eliminatorias</button>
+        <button class="torneo-tab-btn active" id="torneotab-participantes" onclick="showTorneoTab('participantes')">Participantes</button>
+        <button class="torneo-tab-btn" id="torneotab-grupos" onclick="showTorneoTab('grupos')">Grupos</button>
+        <button class="torneo-tab-btn" id="torneotab-eliminatorias" onclick="showTorneoTab('eliminatorias')">Eliminatorias</button>
       </div>
 
       <!-- PARTICIPANTES -->
       <div class="torneo-panel active" id="torneo-panel-participantes">
         <div class="torneo-toolbar torneo-admin-only" style="display:none">
-          <button class="btn btn-yellow" onclick="showAddParticipant()">➕ Agregar participante</button>
+          <button class="btn btn-pixel-amarillo btn-contorno" onclick="showAddParticipant()">Agregar participante</button>
         </div>
         <div class="torneo-participants-list" id="torneo-participants-list"></div>
       </div>
@@ -4127,7 +4137,7 @@
         <div class="torneo-toolbar torneo-admin-only" style="display:none">
           <label style="font-size:0.85rem">N° de grupos:</label>
           <input type="number" id="torneo-num-grupos" min="1" max="8" value="2" class="password-input" style="width:60px">
-          <button class="btn btn-primary" onclick="generarGrupos()">🔀 Generar grupos</button>
+          <button class="btn btn-pixel-amarillo btn-contorno" onclick="generarGrupos()">Generar grupos</button>
         </div>
         <div class="torneo-groups-grid" id="torneo-groups-grid"></div>
       </div>
@@ -4135,7 +4145,7 @@
       <!-- ELIMINATORIAS -->
       <div class="torneo-panel" id="torneo-panel-eliminatorias">
         <div class="torneo-toolbar torneo-admin-only" style="display:none">
-          <button class="btn btn-primary" onclick="generarBracket()">🔀 Generar eliminatorias</button>
+          <button class="btn btn-pixel-amarillo btn-contorno" onclick="generarBracket()">Generar eliminatorias</button>
         </div>
         <div class="torneo-bracket" id="torneo-bracket"></div>
       </div>
@@ -4156,17 +4166,17 @@
     <div id="trueque-game-select" class="torneo-game-select" style="display:none">
       <div class="torneo-game-title">¿Intercambios de qué juego?</div>
       <div class="mode-select-grid" style="max-width:421px">
-        <button class="mode-card" onclick="truequesElegirJuego('go')">
+        <button class="mode-card mode-go" onclick="truequesElegirJuego('go')">
           <img id="trueque-logo-go" class="mode-logo" alt="Pokémon GO">
         </button>
-        <button class="mode-card" onclick="truequesElegirJuego('pocket')">
+        <button class="mode-card mode-tcg" onclick="truequesElegirJuego('pocket')">
           <img id="trueque-logo-tcg" class="mode-logo" alt="TCG Pocket">
         </button>
       </div>
     </div>
 
     <div id="trueque-pocket-wrap" style="display:none">
-    <button type="button" class="trueque-back-btn" onclick="truequesVolver()">← Cambiar juego</button>
+    <button type="button" class="btn btn-pixel-amarillo btn-contorno" style="margin-bottom:12px" onclick="truequesVolver()">Cambiar juego</button>
     <div id="trueque-app" style="display:none">
 
       <div class="trueque-card" id="trueque-admin-note" style="display:none">
@@ -4178,32 +4188,33 @@
           👤 <span id="trueque-whoami-name"></span>
           <span id="trueque-admin-como-wrap" style="display:none"> · Publicar como <select id="trueque-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span>
         </div>
-        <h3 class="trueque-titulo-fila">➕ Publicar intercambio <button type="button" class="btn btn-pixel-amarillo btn-contorno btn-actualizar-cartas" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">Actualizar cartas</button></h3>
+        <h3 class="trueque-titulo-fila">Publicar intercambio <button type="button" class="btn btn-pixel-amarillo btn-contorno btn-actualizar-cartas" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">Actualizar cartas</button></h3>
         <div id="trueque-rar-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e"></div>
+        <div id="trueque-img-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e;text-align:left;line-height:1.55"></div>
         <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
-          <div class="trueque-side-title">🔍 Qué busco</div>
+          <div class="trueque-side-title">Qué busco</div>
           <div class="trueque-chosen" id="trueque-chosen-busca"></div>
           <div class="trueque-exp" id="trueque-expwrap-busca">
             <input type="hidden" id="trueque-exp-busca" value="">
             <button type="button" class="trueque-exp-btn" id="trueque-exp-btn-busca" onclick="trueqeExpToggle('busca')">Cargando expansiones…</button>
             <div class="trueque-exp-list" id="trueque-exp-list-busca" style="display:none"></div>
           </div>
-          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-busca" onclick="trueqePickerToggle('busca')">▾ Ver cartas de la expansión</button>
+          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-busca" onclick="trueqePickerToggle('busca')">Ver cartas de la expansión</button>
           <div class="trueque-dd-panel" id="trueque-dd-panel-busca" style="display:none">
             <input class="trueque-input" id="trueque-dd-search-busca" type="text" placeholder="Filtrar por nombre..." autocomplete="off" oninput="trueqePickerRender('busca')">
             <div class="trueque-dd-grid" id="trueque-dd-grid-busca"></div>
           </div>
         </div>
         <div class="trueque-side ofrece">
-          <div class="trueque-side-title">🎁 Qué ofrezco a cambio</div>
+          <div class="trueque-side-title">Qué ofrezco a cambio</div>
           <div class="trueque-chosen" id="trueque-chosen-ofrece"></div>
           <div class="trueque-exp" id="trueque-expwrap-ofrece">
             <input type="hidden" id="trueque-exp-ofrece" value="">
             <button type="button" class="trueque-exp-btn" id="trueque-exp-btn-ofrece" onclick="trueqeExpToggle('ofrece')">Cargando expansiones…</button>
             <div class="trueque-exp-list" id="trueque-exp-list-ofrece" style="display:none"></div>
           </div>
-          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-ofrece" onclick="trueqePickerToggle('ofrece')">▾ Ver cartas de la expansión</button>
+          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-ofrece" onclick="trueqePickerToggle('ofrece')">Ver cartas de la expansión</button>
           <div class="trueque-dd-panel" id="trueque-dd-panel-ofrece" style="display:none">
             <input class="trueque-input" id="trueque-dd-search-ofrece" type="text" placeholder="Filtrar por nombre..." autocomplete="off" oninput="trueqePickerRender('ofrece')">
             <div class="trueque-dd-grid" id="trueque-dd-grid-ofrece"></div>
@@ -4211,24 +4222,24 @@
         </div>
         <div id="trueque-costo-resumen" class="trueque-costo"></div>
         <input class="trueque-input" id="trueque-card-notes" type="text" placeholder="Notas (opcional)">
-        <button class="btn btn-primary" onclick="trueqeAgregarCarta()">Publicar</button>
+        <button class="btn btn-pixel-amarillo btn-contorno" onclick="trueqeAgregarCarta()">Publicar</button>
       </div>
 
       <div class="trueque-card">
         <h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <span>📋 Tablón del grupo (<span id="trueque-count">0</span>)</span>
-          <button class="btn" id="trueque-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="trueqeAdminToggle()">🔑 Admin</button>
+          <span>Tablón del grupo (<span id="trueque-count">0</span>)</span>
+          <button class="btn btn-pixel-amarillo btn-contorno" id="trueque-admin-btn" onclick="trueqeAdminToggle()">Admin</button>
         </h3>
         <div class="trueque-filters">
-          <button class="active" data-tf="busca" onclick="trueqeFiltrar('busca', this)">🔍 Buscan</button>
-          <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">🎁 Ofrecen</button>
+          <button class="active" data-tf="busca" onclick="trueqeFiltrar('busca', this)">Buscan</button>
+          <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">Ofrecen</button>
           <input class="trueque-input" id="trueque-search" type="text" placeholder="Buscar carta o usuario..." oninput="trueqeRenderBinder()">
         </div>
         <div id="trueque-binder" class="x-list"></div>
       </div>
 
       <div class="trueque-card" id="trueque-mine-card">
-        <h3>🗂️ Mis publicaciones</h3>
+        <h3>Mis publicaciones</h3>
         <div id="trueque-mine" class="x-list"></div>
       </div>
 
@@ -4237,7 +4248,7 @@
 
     <!-- ===== INTERCAMBIOS: POKÉMON GO ===== -->
     <div id="trueque-go-wrap" style="display:none">
-      <button type="button" class="trueque-back-btn" onclick="truequesVolver()">← Cambiar juego</button>
+      <button type="button" class="btn btn-pixel-amarillo btn-contorno" style="margin-bottom:12px" onclick="truequesVolver()">Cambiar juego</button>
 
       <div class="trueque-card" id="tgo-admin-note" style="display:none">
         <p style="font-size:0.82rem;color:var(--muted)">Estás usando la página como administrador: puedes ver el tablón y borrar publicaciones con «Admin». Para publicar hay que entrar con un usuario creado en Datos → Usuarios.</p>
@@ -4246,8 +4257,8 @@
       <div class="trueque-card" id="tgo-publish-card">
         <div class="tgo-head"><img id="tgo-head-logo" alt="Pokémon GO"><div class="trueque-whoami" style="margin:0">👤 <span id="tgo-whoami-name"></span>
             <span id="tgo-admin-como-wrap" style="display:none"> · Publicar como <select id="tgo-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span></div></div>
-        <h3>➕ Publicar intercambio</h3>
-        <div class="trade-block busca"><span class="trade-label">🔍 Busca</span></div>
+        <h3>Publicar intercambio</h3>
+        <div class="trade-block busca"><span class="trade-label">Busca</span></div>
         <div class="tgo-field">
           <input class="trueque-input" id="tgo-poke-input" type="text" placeholder="Pokémon que buscas (escribe el nombre)..." autocomplete="off"
             oninput="tgoOnPokeInput()" onfocus="tgoOnPokeInput()" onblur="tgoHideAcDelayed()" onkeydown="tgoPokeKey(event)">
@@ -4270,7 +4281,7 @@
           </div>
           <button type="button" class="trueque-back-btn" style="margin:0" onclick="tgoClearSelected()">Quitar</button>
         </div>
-        <div class="trade-block ofrece" style="margin-top:14px"><span class="trade-label">🎁 Ofrece a cambio</span></div>
+        <div class="trade-block ofrece" style="margin-top:14px"><span class="trade-label">Ofrece a cambio</span></div>
         <div class="tgo-field">
           <input class="trueque-input" id="tgo-of-input" type="text" placeholder="Pokémon que ofreces (escribe el nombre)..." autocomplete="off"
             oninput="tgoOfOnInput()" onfocus="tgoOfOnInput()" onblur="tgoOfHideAcDelayed()" onkeydown="tgoOfPokeKey(event)">
@@ -4293,20 +4304,20 @@
           <button type="button" class="trueque-back-btn" style="margin:0" onclick="tgoOfClear()">Quitar</button>
         </div>
         <input class="trueque-input" id="tgo-notes" type="text" placeholder="Notas (opcional)" maxlength="140">
-        <button class="btn btn-primary" onclick="tgoPublicar()">Publicar</button>
+        <button class="btn btn-pixel-amarillo btn-contorno" onclick="tgoPublicar()">Publicar</button>
       </div>
 
       <div class="trueque-card">
         <h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <span>📋 Tablón de intercambios (<span id="tgo-count">0</span>)</span>
-          <button class="btn" id="tgo-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="tgoAdminToggle()">🔑 Admin</button>
+          <span>Tablón de intercambios (<span id="tgo-count">0</span>)</span>
+          <button class="btn btn-pixel-amarillo btn-contorno" id="tgo-admin-btn" onclick="tgoAdminToggle()">Admin</button>
         </h3>
         <div class="trueque-filters">
           <button class="active" data-tgof="todos" onclick="tgoFiltrar('todos', this)">Todos</button>
-          <button data-tgof="shiny" onclick="tgoFiltrar('shiny', this)">✨ Variocolor</button>
+          <button data-tgof="shiny" onclick="tgoFiltrar('shiny', this)">Variocolor</button>
           <button data-tgof="normal" onclick="tgoFiltrar('normal', this)">Normales</button>
           <button data-tgof="mega" onclick="tgoFiltrar('mega', this)">Mega</button>
-          <button data-tgof="dmax" onclick="tgoFiltrar('dmax', this)">🔴 Dinamax</button>
+          <button data-tgof="dmax" onclick="tgoFiltrar('dmax', this)">Dinamax</button>
           <button data-tgof="gmax" onclick="tgoFiltrar('gmax', this)">Gigamax</button>
           <input class="trueque-input" id="tgo-search" type="text" placeholder="Buscar Pokémon o usuario..." oninput="tgoRender()">
         </div>
@@ -4314,7 +4325,7 @@
       </div>
 
       <div class="trueque-card" id="tgo-mine-card">
-        <h3>🗂️ Mis intercambios</h3>
+        <h3>Mis intercambios</h3>
         <div id="tgo-mine" class="x-list"></div>
       </div>
     </div>
@@ -5363,11 +5374,16 @@ function aplicarLupaBuscador() {
 }
 aplicarLupaBuscador();
 
-// Cada juego tiene su color de acento (Champions azul, GO turquesa, TCG Pocket violeta). Se aplica solo
-// mientras se está en la pestaña Consulta dentro de un modo; en el resto de la página sigue el naranja.
+// Cada juego tiene su color de acento (Champions amarillo, GO azul, TCG Pocket rojo). Se aplica mientras
+// hay un juego elegido en Consulta, Torneos o Intercambios; en el resto de la página sigue el naranja.
 function aplicarTemaModo() {
+  let m = '';
+  try {
+    if (currentTab === 'consulta') m = currentMode || '';
+    else if (currentTab === 'torneos') m = currentTorneoGame || '';
+    else if (currentTab === 'trueques') m = truequesGame === 'pocket' ? 'tcg' : (truequesGame || '');
+  } catch (e) { m = ''; }   // alguna de esas variables todavía no existe: se queda el naranja
   const h = document.documentElement;
-  const m = (currentMode && currentTab === 'consulta') ? currentMode : '';
   if (m) h.setAttribute('data-modo', m); else h.removeAttribute('data-modo');
 }
 
@@ -13529,9 +13545,9 @@ let currentTorneoTab = 'participantes';
 let participantSpriteTimer = null;
 
 const TORNEO_GAME_TITLES = {
-  champions: '🏆 Torneo Champions',
-  go: '🗺️ Torneo Pokémon GO',
-  tcg: '🃏 Torneo TCG Pocket'
+  champions: 'Torneo Champions',
+  go: 'Torneo Pokémon GO',
+  tcg: 'Torneo TCG Pocket'
 };
 
 function EMPTY_TORNEO() {
@@ -13586,7 +13602,7 @@ function torneoActualizarAdminUI() {
   const btn = document.getElementById('torneo-admin-btn');
   if (btn) {
     btn.style.display = torneoAdminPorSesion() ? 'none' : '';
-    btn.textContent = torneoAdminUnlocked ? '🔓 Salir de modo admin' : '🔑 Admin';
+    btn.textContent = torneoAdminUnlocked ? 'Salir de modo admin' : 'Admin';
     btn.classList.toggle('btn-danger', torneoAdminUnlocked);
   }
 }
@@ -13674,6 +13690,7 @@ iniciarTorneosNube();
 
 function selectTorneoGame(mode) {
   currentTorneoGame = mode;
+  aplicarTemaModo();
   document.getElementById('torneo-game-select').style.display = 'none';
   document.getElementById('torneo-body').style.display = '';
   document.getElementById('torneo-header-title').textContent = TORNEO_GAME_TITLES[mode] || '';
@@ -13685,6 +13702,7 @@ function selectTorneoGame(mode) {
 
 function backToTorneoGameSelect() {
   currentTorneoGame = null;
+  aplicarTemaModo();
   document.getElementById('torneo-body').style.display = 'none';
   document.getElementById('torneo-game-select').style.display = '';
 }
@@ -14990,12 +15008,37 @@ function trueqeCardKey(c) { return c.setName + '|' + (c.localId || '') + '|' + c
 // Las miniaturas usan la versión liviana de la imagen (TCGdex: low.webp).
 function trueqeThumb(url) { return (url || '').replace('/high.webp', '/low.webp'); }
 
+// Imágenes propias, subidas al repositorio junto a este archivo:  cartas/{expansión}/{número}.webp
+// (también .png o .jpg, y el número con o sin ceros: 1.webp o 001.webp; los negativos van como -3.webp).
+// La carpeta es el último recurso: la página prueba primero las fuentes de internet de siempre y solo si
+// ninguna tiene la imagen usa esta. Las expansiones de la lista de abajo son las que el administrador
+// revisa para saber cuáles ya se cargan desde internet (y se pueden borrar de la carpeta).
+const TRUEQUE_CARPETA_LOCAL = 'cartas';
+const TRUEQUE_SETS_CON_IMAGEN_LOCAL = ['SP1'];
+function trueqeImagenesLocales(c) {
+  if (!c || !c.setId || c.localId === undefined || c.localId === '') return [];
+  const id = String(c.localId);
+  const nombres = [id];
+  if (/^\d+$/.test(id) && id.padStart(3, '0') !== id) nombres.push(id.padStart(3, '0'));
+  const base = TRUEQUE_CARPETA_LOCAL + '/' + encodeURIComponent(String(c.setId)) + '/';
+  const out = [];
+  ['webp', 'png', 'jpg'].forEach(ext => nombres.forEach(n => out.push(base + encodeURIComponent(n) + '.' + ext)));
+  return out;
+}
+// Dirección de la imagen propia que realmente cargó, para usarla también en el visor grande.
+const TRUEQUE_IMG_OK = {};
+function trueqeImgOk(img) {
+  const src = img.currentSrc || img.src || '';
+  if (img.dataset.card && src.indexOf('/' + TRUEQUE_CARPETA_LOCAL + '/') !== -1) TRUEQUE_IMG_OK[img.dataset.card] = src;
+}
+
 // Lista de direcciones posibles para la imagen de una carta, en orden de
 // preferencia. Si una falla, se prueba la siguiente (ver trueqeImgFail).
 function trueqeImageCandidates(c) {
   const out = [];
   const add = u => { if (u && !out.includes(u)) out.push(u); };
   const img = c.image || '';
+  const locales = trueqeImagenesLocales(c);
   const pd = trueqePdImage(c.setId, c.localId);
   // La dirección de la fuente de respaldo de cartas no sirve imágenes: va al final.
   const dudosa = /pokemon-tcg-pocket-database/.test(img);
@@ -15015,6 +15058,7 @@ function trueqeImageCandidates(c) {
     add(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/${lim}/${lim}_${pad}_EN.webp`);
   }
   if (dudosa) add(img);
+  locales.forEach(add);
   return out;
 }
 
@@ -15022,7 +15066,7 @@ function trueqeImgHtml(c, lazy, cls) {
   const cands = trueqeImageCandidates(c);
   if (!cands.length) return `<div class="trueque-noimg ${cls || ''}">Sin imagen</div>`;
   const etiqueta = (c.setId || '') + ((c.localId !== undefined && c.localId !== '') ? ' #' + c.localId : '');
-  return `<img ${lazy ? 'loading="lazy" ' : ''}${cls ? `class="${cls}" ` : ''}src="${trueqeEsc(cands[0])}" alt="" data-card="${trueqeEsc(etiqueta)}" data-alt="${trueqeEsc(cands.slice(1).join('|'))}" onerror="trueqeImgFail(this)">`;
+  return `<img ${lazy ? 'loading="lazy" ' : ''}${cls ? `class="${cls}" ` : ''}src="${trueqeEsc(cands[0])}" alt="" data-card="${trueqeEsc(etiqueta)}" data-alt="${trueqeEsc(cands.slice(1).join('|'))}" onload="trueqeImgOk(this)" onerror="trueqeImgFail(this)">`;
 }
 
 function trueqeImgFail(img) {
@@ -15137,6 +15181,7 @@ async function trueqeAdminSetRareza(sel) {
 }
 function trueqeRefrescarVistaRarezas() {
   trueqeMostrarAviso();
+  trueqeAuditarImagenesPropias(false);
   ['busca', 'ofrece'].forEach(sd => {
     const pnl = document.getElementById('trueque-dd-panel-' + sd);
     if (pnl && pnl.style.display !== 'none') trueqePickerRender(sd);
@@ -15156,6 +15201,80 @@ function trueqeMostrarAviso() {
     el.style.display = 'none';
     el.textContent = '';
   }
+}
+
+// ── Aviso de administrador: imágenes de la carpeta «cartas» ──
+// Para las expansiones de TRUEQUE_SETS_CON_IMAGEN_LOCAL, revisa de dónde carga cada carta: si ya llega desde
+// internet, el archivo de la carpeta sobra y se puede borrar del repositorio; si solo carga desde la carpeta,
+// hay que dejarlo.
+const trueqeAudImg = { corriendo: false, hecho: false, res: null };
+
+function trueqeEsImagenLocal(url) { return String(url).indexOf(TRUEQUE_CARPETA_LOCAL + '/') === 0; }
+
+// Prueba las direcciones en el mismo orden que la página y dice cuál fue la primera que cargó.
+function trueqeProbarImagen(c) {
+  const cands = trueqeImageCandidates(c);
+  return new Promise(resolve => {
+    let i = 0;
+    const siguiente = () => {
+      if (i >= cands.length) { resolve({ origen: 'ninguna', url: '' }); return; }
+      const url = cands[i++];
+      const im = new Image();
+      im.onload = () => resolve({ origen: trueqeEsImagenLocal(url) ? 'carpeta' : 'internet', url });
+      im.onerror = siguiente;
+      im.src = url;
+    };
+    siguiente();
+  });
+}
+
+async function trueqeAuditarImagenesPropias(forzar) {
+  const el = document.getElementById('trueque-img-aviso');
+  if (!el) return;
+  if (!trueqeAdminUnlocked || !TRUEQUE_CARD_INDEX) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const cartas = TRUEQUE_CARD_INDEX.filter(c => TRUEQUE_SETS_CON_IMAGEN_LOCAL.includes(String(c.setId)));
+  if (!cartas.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  if (trueqeAudImg.corriendo) return;
+  if (trueqeAudImg.hecho && !forzar) { trueqeDibujarAvisoImagenes(); return; }
+  trueqeAudImg.corriendo = true;
+  el.style.display = '';
+  el.textContent = 'Revisando de dónde se cargan las imágenes de la carpeta «' + TRUEQUE_CARPETA_LOCAL + '»…';
+  const res = { internet: [], carpeta: [], ninguna: [] };
+  let n = 0;
+  const trabajador = async () => {
+    while (n < cartas.length) {
+      const c = cartas[n++];
+      const r = await trueqeProbarImagen(c);
+      res[r.origen].push(c);
+    }
+  };
+  try { await Promise.all([1, 2, 3, 4, 5, 6].map(trabajador)); } catch (e) { /* se muestra lo que se alcanzó a revisar */ }
+  trueqeAudImg.res = res; trueqeAudImg.hecho = true; trueqeAudImg.corriendo = false;
+  trueqeDibujarAvisoImagenes();
+}
+
+function trueqeDibujarAvisoImagenes() {
+  const el = document.getElementById('trueque-img-aviso');
+  const res = trueqeAudImg.res;
+  if (!el || !res) return;
+  const porSet = lista => {
+    const m = {};
+    lista.slice().sort((a, b) => Number(a.localId) - Number(b.localId)).forEach(c => { (m[c.setId] = m[c.setId] || []).push(c.localId); });
+    return m;
+  };
+  const lineas = (lista, texto) => Object.entries(porSet(lista)).map(([set, nums]) =>
+    `<div>${texto(trueqeEsc(set), nums.length, nums.map(x => trueqeEsc('#' + x)).join(', '))}</div>`).join('');
+  const partes = [];
+  if (res.internet.length) partes.push(`<div style="margin-bottom:6px"><b>Ya se cargan desde internet: se pueden borrar del repositorio.</b></div>` +
+    lineas(res.internet, (set, cant, nums) => `${set}: ${cant} ${cant === 1 ? 'carta' : 'cartas'} (${nums}). Borrá esos archivos de la carpeta <b>${TRUEQUE_CARPETA_LOCAL}/${set}/</b>.`));
+  if (res.carpeta.length) partes.push(`<div style="margin:8px 0 6px"><b>Todavía se cargan desde la carpeta: no las borres.</b></div>` +
+    lineas(res.carpeta, (set, cant, nums) => `${set}: ${cant} ${cant === 1 ? 'carta' : 'cartas'} (${nums}).`));
+  if (res.ninguna.length) partes.push(`<div style="margin:8px 0 6px"><b>Sin imagen en ningún lado.</b></div>` +
+    lineas(res.ninguna, (set, cant, nums) => `${set}: ${cant} ${cant === 1 ? 'carta' : 'cartas'} (${nums}).`));
+  if (!partes.length) partes.push('No hay cartas para revisar.');
+  el.style.display = '';
+  el.innerHTML = `<div style="margin-bottom:6px"><b>Imágenes de la carpeta «${TRUEQUE_CARPETA_LOCAL}»</b></div>` + partes.join('') +
+    `<div style="margin-top:8px"><button type="button" class="btn btn-pixel-amarillo btn-contorno" onclick="trueqeAuditarImagenesPropias(true)">Volver a revisar</button></div>`;
 }
 
 let trueqeSets = []; // [{ name, logo }]
@@ -15267,7 +15386,7 @@ function trueqePickerUpdateToggle(side) {
   const panel = document.getElementById('trueque-dd-panel-' + side);
   const btn = document.getElementById('trueque-dd-toggle-' + side);
   const abierto = panel.style.display !== 'none';
-  btn.textContent = (abierto ? '▴ Ocultar cartas' : '▾ Ver cartas de la expansión');
+  btn.textContent = (abierto ? 'Ocultar cartas' : 'Ver cartas de la expansión');
 }
 
 // ── VISOR ANIMADO DE LAS CARTAS DE INTERCAMBIO (el mismo de Mazos) ─────────────
@@ -15277,6 +15396,8 @@ const TRUEQUE_VISOR = {};
 let trueqeVisorSeq = 0;
 
 function trueqeImagenGrande(card) {
+  const propia = TRUEQUE_IMG_OK[(card.setId || '') + ((card.localId !== undefined && card.localId !== '') ? ' #' + card.localId : '')];
+  if (propia) return propia;
   const u = card.image || (trueqeImageCandidates(card).find(Boolean) || '');
   return u.replace('/low.webp', '/high.webp');
 }
@@ -15647,7 +15768,7 @@ let trueqeAdminUnlocked = false;
 function trueqeSetAdmin(on) {
   trueqeAdminUnlocked = on;
   const btn = document.getElementById('trueque-admin-btn');
-  if (btn) { btn.textContent = on ? '🔓 Salir de modo admin' : '🔑 Admin'; btn.classList.toggle('btn-danger', on); }
+  if (btn) { btn.textContent = on ? 'Salir de modo admin' : 'Admin'; btn.classList.toggle('btn-danger', on); }
 }
 
 function trueqeAdminToggle() {
@@ -15718,7 +15839,7 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
     ofrece: t.ofrece.map((x, i) => mk(x, i, regO)),
     notas: c.notas ? trueqeEsc(c.notas) : '',
     extra: trueqeCostoPostHtml(t) + contactoPublicoHtml(c),
-    borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}${trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">✕ Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}${trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
   });
 }
 
@@ -15791,7 +15912,7 @@ function trueqeTileHtml(g) {
 function trueqePanelHtml(g) {
   const n = g.posts.length;
   const otro = g.side === 'busca' ? 'ofrece' : 'busca';
-  const lbl = g.side === 'busca' ? '🎁 OFRECE A CAMBIO' : '🔍 BUSCA A CAMBIO';
+  const lbl = g.side === 'busca' ? 'OFRECE A CAMBIO' : 'BUSCA A CAMBIO';
   const mini = (x, k, reg) => `<div class="trade-mini clickable" title="${trueqeEsc(x.name)} · toca para verla en grande" onclick="trueqeAbrirVisor('${reg.ids[k]}', this, '${reg.ctx}', ${k})">
       ${trueqeImgHtml(x, true)}
       <div class="tm-name">${trueqeEsc(x.name)}</div>
@@ -15806,13 +15927,13 @@ function trueqePanelHtml(g) {
     const costoLinea = rr ? `<div class="o-cost">${rarezaIconosHtml(trueqeRarezaDe(g.card))} · Costo del cambio: ${trueqePolvoHtml(rr.costo)}</div>` : '';
     const esMia = !!(trueqeUser && c.userId === trueqeUser.id);
     const botones = ((esMia || trueqeAdminUnlocked) ? tgoDoneBtnHtml(c, 'trueqeToggleRealizado') : '') +
-      (trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">✕ Eliminar (admin)</button>` : '');
+      (trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">Eliminar (admin)</button>` : '');
     return `<div class="tgo-offer multi${c.realizado ? ' done' : ''}">
       <div class="o-info">
         <div class="o-lbl">${lbl}${pareado && t[g.side].length > 1 ? `<span class="o-pair">· carta ${i + 1} de ${t[g.side].length}</span>` : ''}</div>
         <div class="o-who">${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}</div>
         ${costoLinea}
-        ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
+        ${c.realizado ? '<div class="tgo-done-tag">Realizado</div>' : ''}
       </div>
       <div class="o-cards">${cartas.length ? cartas.map((x, k) => mini(x, k, reg)).join('') : '<div class="trade-none">—</div>'}</div>
       <div class="o-info">
@@ -15826,7 +15947,7 @@ function trueqePanelHtml(g) {
   const regVer = trueqeRegLista([cartaVer]);
   return `<div class="tp-head">
       <div class="tp-buscada trade-mini clickable" title="Toca para ver ${trueqeEsc(g.card.name)} en grande" onclick="trueqeAbrirVisor('${regVer.ids[0]}', this, '${regVer.ctx}', 0)">${trueqeImgHtml(cartaVer, true)}</div>
-      <div class="tp-tit"><span>${g.side === 'busca' ? '🔍 Busca' : '🎁 Ofrece'}: <b>${trueqeEsc(g.card.name)}</b></span>
+      <div class="tp-tit"><span>${g.side === 'busca' ? 'Busca' : 'Ofrece'}: <b>${trueqeEsc(g.card.name)}</b></span>
         <span class="x-more">${g.card.setName ? trueqeEsc(g.card.setName) + ' · ' : ''}${n} ${n === 1 ? 'oferta' : 'ofertas'}</span></div>
       <span class="tp-btns"><button type="button" class="tp-close" onclick="trueqeClosePanel()">Cerrar ✕</button></span></div>
     <div class="tp-hint">Toca la carta buscada o cualquiera de las ofrecidas para verla en grande.</div>${ofertas}`;
@@ -15922,6 +16043,7 @@ function initTruequeLogos() {
 
 function truequesEnter(reset) {
   if (reset) truequesGame = null;
+  aplicarTemaModo();
   if (!truequesGame) initTruequeLogos();
   document.getElementById('trueque-game-select').style.display = truequesGame ? 'none' : 'block';
   document.getElementById('trueque-go-wrap').style.display = truequesGame === 'go' ? 'block' : 'none';
@@ -16300,9 +16422,9 @@ function xFilaHtml(o) {
     </summary>
     <div class="x-body">
       <div class="x-cols">
-        ${col('busca', '🔍 Busca', o.busca)}
+        ${col('busca', 'Busca', o.busca)}
         <div class="x-arrow x-arrow-big">⇄</div>
-        ${col('ofrece', '🎁 Ofrece a cambio', o.ofrece)}
+        ${col('ofrece', 'Ofrece a cambio', o.ofrece)}
       </div>
       ${o.notas ? `<div class="x-notes">${o.notas}</div>` : ''}
       ${o.extra || ''}
@@ -16527,7 +16649,7 @@ function tgoCardHtml(c, showDelete, esAdmin) {
     ofrece,
     notas: c.notas ? tgoEsc(c.notas) : '',
     extra: contactoPublicoHtml(c),
-    borrar: showDelete ? `${tgoDoneBtnHtml(c)}${tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">✕ Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c)}${tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">Eliminar (admin)</button>` : `<div class="x-cierre-nota">✅ Cuando se concrete el intercambio, márcalo como realizado: el administrador lo eliminará.</div>`}` : ''
   });
 }
 
@@ -16554,7 +16676,7 @@ function tgoHydrate(container) {
 
 // ── Marca de «intercambio realizado» (la pone quien publicó) ───────────────
 function tgoDoneBtnHtml(c, fn) {
-  return `<button type="button" class="tgo-done-btn${c.realizado ? ' on' : ''}" onclick="${fn || 'tgoToggleRealizado'}('${c.id}')">${c.realizado ? '✅ Intercambio realizado (tocar para quitar)' : '☑️ Marcar como realizado'}</button>`;
+  return `<button type="button" class="tgo-done-btn${c.realizado ? ' on' : ''}" onclick="${fn || 'tgoToggleRealizado'}('${c.id}')">${c.realizado ? 'Intercambio realizado (tocar para quitar)' : 'Marcar como realizado'}</button>`;
 }
 async function tgoToggleRealizado(cardId) {
   if (!window._fbDb) return;
@@ -16613,13 +16735,13 @@ function tgoPanelHtml(g) {
     const yo = tgoUser();
     const esMia = !!(yo && c.userId === yo.id);
     const borrar = ((esMia || tgoAdminUnlocked) ? tgoDoneBtnHtml(c) : '') +
-      (tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">✕ Eliminar (admin)</button>` : '');
+      (tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">Eliminar (admin)</button>` : '');
     return `<div class="tgo-offer${c.realizado ? ' done' : ''}">
       <div class="o-give">${of ? of.grande : '<span class="x-none">—</span>'}</div>
       <div class="o-info">
-        <div class="o-lbl">🎁 OFRECE A CAMBIO</div>
+        <div class="o-lbl">OFRECE A CAMBIO</div>
         <div class="o-who">${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}</div>
-        ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
+        ${c.realizado ? '<div class="tgo-done-tag">Realizado</div>' : ''}
         ${c.notas ? `<div class="x-notes">${tgoEsc(c.notas)}</div>` : ''}
         ${contactoPublicoHtml(c)}
         ${borrar}
@@ -16724,7 +16846,7 @@ function tgoSetAdmin(on) {
   tgoAdminUnlocked = on;
   const btn = document.getElementById('tgo-admin-btn');
   if (btn) {
-    btn.textContent = on ? '🔓 Salir de modo admin' : '🔑 Admin';
+    btn.textContent = on ? 'Salir de modo admin' : 'Admin';
     btn.classList.toggle('btn-danger', on);
   }
 }
