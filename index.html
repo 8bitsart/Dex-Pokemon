@@ -4190,12 +4190,6 @@
         </div>
         <h3 class="trueque-titulo-fila">Publicar intercambio <button type="button" class="btn btn-pixel-amarillo btn-contorno btn-actualizar-cartas" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">Actualizar cartas</button></h3>
         <div id="trueque-rar-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e"></div>
-        <div id="trueque-img-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e;text-align:left;line-height:1.55"></div>
-        <details id="trueque-nombres-panel" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;text-align:left">
-          <summary style="cursor:pointer;color:#ffd75e"><b>Nombres de las expansiones</b></summary>
-          <div style="margin:6px 0;line-height:1.5">Escribí el nombre en castellano y tocá fuera del campo para guardarlo. Se ve en todos tus dispositivos. El gris es el nombre original; dejá el campo vacío para volver a él.</div>
-          <div id="trueque-nombres-lista"></div>
-        </details>
         <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
           <div class="trueque-side-title">Qué busco</div>
@@ -4235,6 +4229,12 @@
           <span>Tablón del grupo (<span id="trueque-count">0</span>)</span>
           <button class="btn btn-pixel-amarillo btn-contorno" id="trueque-admin-btn" onclick="trueqeAdminToggle()">Admin</button>
         </h3>
+        <div id="trueque-img-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e;text-align:left;line-height:1.55"></div>
+        <details id="trueque-nombres-panel" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;text-align:left">
+          <summary style="cursor:pointer;color:#ffd75e"><b>Nombres de las expansiones</b></summary>
+          <div style="margin:6px 0;line-height:1.5">Escribí el nombre en castellano y tocá fuera del campo para guardarlo. Se ve en todos tus dispositivos. El gris es el nombre original; dejá el campo vacío para volver a él.</div>
+          <div id="trueque-nombres-lista"></div>
+        </details>
         <div class="trueque-filters">
           <button class="active" data-tf="busca" onclick="trueqeFiltrar('busca', this)">Buscan</button>
           <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">Ofrecen</button>
@@ -15356,8 +15356,13 @@ function trueqeDibujarPanelNombres() {
   const caja = document.getElementById('trueque-nombres-panel');
   const lista = document.getElementById('trueque-nombres-lista');
   if (!caja || !lista) return;
-  if (!trueqeAdminUnlocked || !TRUEQUE_CARD_INDEX) { caja.style.display = 'none'; return; }
+  if (!trueqeAdminUnlocked) { caja.style.display = 'none'; return; }
   caja.style.display = '';
+  if (!TRUEQUE_CARD_INDEX) {
+    lista.textContent = 'Cargando expansiones…';
+    Promise.resolve(trueqeGetCardIndex()).then(() => { trueqeAplicarNombresManuales(); trueqeDibujarPanelNombres(); trueqeAuditarImagenesPropias(false); });
+    return;
+  }
   if (lista.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;   // no pisar lo que se está escribiendo
   const vistos = new Map();
   TRUEQUE_CARD_INDEX.forEach(c => {
@@ -15403,6 +15408,8 @@ async function trueqeInitPickers() {
     await trueqeCargarRarezasAdmin();
     trueqeSets = sets;
     trueqeMostrarAviso();
+    trueqeDibujarPanelNombres();
+    trueqeAuditarImagenesPropias(false);
     sides.forEach(side => {
       trueqeExpSetLabel(side, document.getElementById('trueque-exp-' + side).value || 'Elige una expansión…');
       trueqeExpRenderList(side);
@@ -15865,6 +15872,8 @@ function trueqeSetAdmin(on) {
   trueqeAdminUnlocked = on;
   const btn = document.getElementById('trueque-admin-btn');
   if (btn) { btn.textContent = on ? 'Salir de modo admin' : 'Admin'; btn.classList.toggle('btn-danger', on); }
+  trueqeDibujarPanelNombres();
+  trueqeAuditarImagenesPropias(false);
 }
 
 function trueqeAdminToggle() {
