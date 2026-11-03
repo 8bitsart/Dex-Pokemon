@@ -3701,6 +3701,9 @@
     background: var(--yellow); color: var(--black);
   }
 
+  /* Detalle de un mazo: la carta principal grande y, debajo, la segunda */
+  .mazo-public-principal-col { display: flex; flex-direction: column; gap: 10px; }
+
   /* Lista de mazos de Consulta (TCG Pocket): la carta principal y una segunda, superpuestas y recortadas abajo */
   #tcg-mazos-public-list .mazo-row { overflow: hidden; min-height: 84px; padding: 0 14px 0 10px; gap: 14px; border-left: 3px solid var(--yellow); }
   .mazo-pair { position: relative; flex: 0 0 auto; align-self: stretch; width: 118px; min-height: 84px; overflow: hidden; }
@@ -5516,6 +5519,14 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
     ? `<span class="carta-holo" data-holo="${holoNivel(cartaPrincipal)}"><img src="${esc(cartaPrincipal.imagen)}" class="mazo-public-principal-img"${principalClickAttr} onerror="this.style.display='none';this.parentNode.classList.add('sin-imagen')"></span>`
     : `<div class="mazo-public-principal-img mazo-public-principal-img-empty">Sin cartas</div>`;
 
+  const seg = getMazoSecundaria(mazo, tcgData);
+  const segClickAttr = (seg && seg.carta && seg.carta.id && seg.ref)
+    ? ` onclick="abrirCartaDetalle('${seg.ref.pokemon.replace(/'/g,"\\'")}','${seg.carta.id}','${nombreMazoJs}',false,this,'${ctxId}',${seg.idx})" style="cursor:pointer"`
+    : '';
+  const secundariaHTML = seg && seg.carta && seg.carta.imagen
+    ? `<span class="carta-holo" data-holo="${holoNivel(seg.carta)}"><img src="${esc(seg.carta.imagen)}" class="mazo-public-principal-img mazo-public-secundaria-img"${segClickAttr} onerror="this.style.display='none';this.parentNode.classList.add('sin-imagen')"></span>`
+    : '';
+
   const cartasHTML = mazo.cartas.map((ref, i) => {
     const cartasDelPokemon = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas))
       ? tcgData[ref.pokemon].cartas : [];
@@ -5533,7 +5544,7 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
   return `<div class="mazo-public-detail-wrap">
       <div class="mazo-public-principal-col">
         ${principalHTML}
-        <div class="mazo-public-principal-label">Carta principal</div>
+        ${secundariaHTML}
       </div>
       <div class="mazo-public-cards-grid">${cartasHTML}</div>
     </div>`;
