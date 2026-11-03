@@ -3700,6 +3700,21 @@
   .torneo-tab-btn:hover, .torneo-tab-btn.active, .trueque-filters button:hover, .trueque-filters button.active {
     background: var(--yellow); color: var(--black);
   }
+
+  /* Lista de mazos de Consulta (TCG Pocket): la carta principal y una segunda, superpuestas y recortadas abajo */
+  #tcg-mazos-public-list .mazo-row { overflow: hidden; min-height: 84px; padding: 0 14px 0 10px; gap: 14px; border-left: 3px solid var(--yellow); }
+  .mazo-pair { position: relative; flex: 0 0 auto; align-self: stretch; width: 118px; min-height: 84px; overflow: hidden; }
+  .mazo-pair-img { position: absolute; top: 9px; width: 62px; height: auto; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,0.6); }
+  .mazo-pair-front { left: 28px; z-index: 2; }
+  .mazo-pair.dos .mazo-pair-front { left: 8px; transform: rotate(-3deg); transform-origin: 0 100%; }
+  .mazo-pair-back { left: 50px; z-index: 1; transform: rotate(4deg); transform-origin: 0 100%; }
+  @media (max-width: 430px) {
+    .mazo-pair { width: 98px; }
+    .mazo-pair-img { width: 52px; }
+    .mazo-pair-front { left: 24px; }
+    .mazo-pair.dos .mazo-pair-front { left: 6px; }
+    .mazo-pair-back { left: 40px; }
+  }
 </style>
 </head>
 <body>
@@ -5537,8 +5552,11 @@ function renderTcgMazosPublicList(mode) {
   const expandido = tcgMazosVistaModo === 'expandido';
   listEl.innerHTML = store.map((mazo, idx) => {
     const { carta } = getMazoPrincipal(mazo, tcgData);
-    const thumbHTML = carta && carta.imagen
-      ? `<img src="${esc(carta.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
+    const seg = getMazoSecundaria(mazo, tcgData);
+    const img1 = carta && carta.imagen ? `<img src="${esc(carta.imagen)}" class="mazo-pair-img mazo-pair-front" alt="" onerror="this.style.display='none'">` : '';
+    const img2 = seg && seg.carta && seg.carta.imagen ? `<img src="${esc(seg.carta.imagen)}" class="mazo-pair-img mazo-pair-back" alt="" onerror="this.style.display='none'">` : '';
+    const thumbHTML = (img1 || img2)
+      ? `<span class="mazo-pair${img1 && img2 ? ' dos' : ''}">${img2}${img1}</span>`
       : '<div class="mazo-row-thumb mazo-row-thumb-empty"></div>';
     const detailHTML = expandido ? construirMazoPublicDetailHTML(mazo, tcgData) : '';
     return `
@@ -12139,6 +12157,31 @@ function getMazoPrincipal(mazo, tcgData) {
   return { ref, carta: resolverCartaDeRef(ref, cartasRef), idx };
 }
 
+// Segunda carta que se muestra junto a la principal en la lista de mazos de Consulta (como en TCGmini).
+// Se elige en el editor del mazo con el botón 🥈; si no se eligió ninguna, se usa la primera carta de otro
+// Pokémon distinto del principal que tenga imagen.
+function getMazoSecundaria(mazo, tcgData) {
+  const cartas = mazo.cartas || [];
+  if (cartas.length < 2) return null;
+  const pr = getMazoPrincipal(mazo, tcgData);
+  const resolver = i => {
+    const ref = cartas[i];
+    const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
+    return { ref, carta: resolverCartaDeRef(ref, cartasRef), idx: i };
+  };
+  const conImagen = r => r.carta && r.carta.imagen;
+  if (Number.isInteger(mazo.secundaria) && mazo.secundaria !== pr.idx && cartas[mazo.secundaria]) {
+    const r = resolver(mazo.secundaria);
+    if (conImagen(r)) return r;
+  }
+  const otros = cartas.map((_, i) => i).filter(i => i !== pr.idx);
+  for (const i of otros) {
+    if (cartas[i].pokemon !== (pr.ref && pr.ref.pokemon)) { const r = resolver(i); if (conImagen(r)) return r; }
+  }
+  for (const i of otros) { const r = resolver(i); if (conImagen(r)) return r; }
+  return null;
+}
+
 // Clave del editor de cartas actualmente abierto ("modo-idx"), o null si
 // ninguno está expandido. Se usa para volver a mostrarlo en su lugar después
 // de redibujar la lista (por ejemplo, tras agregar o quitar una carta).
@@ -12570,6 +12613,7 @@ function renderMazoCardsList() {
     return;
   }
   const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const secundariaIdx = Number.isInteger(mazo.secundaria) && mazo.secundaria !== principalIdx ? mazo.secundaria : -1;
   const nombreMazoJs = (mazo.nombre || 'Sin nombre').replace(/'/g, "\\'");
   list.innerHTML = mazo.cartas.map((ref, i) => {
     const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
@@ -12588,6 +12632,7 @@ function renderMazoCardsList() {
         <div class="mazo-card-row-exp">${esc(label)}</div>
       </div>
       <button class="mazo-card-row-star ${esPrincipal ? 'active' : ''}" title="${esPrincipal ? 'Es la carta principal del mazo' : 'Usar como carta principal'}" onclick="setMazoPrincipal(${i})">⭐</button>
+      <button class="mazo-card-row-star ${i === secundariaIdx ? 'active' : ''}" title="${i === secundariaIdx ? 'Es la segunda carta del mazo (tocá para quitarla)' : 'Usar como segunda carta (se ve junto a la principal en la lista de mazos)'}" onclick="setMazoSecundaria(${i})">🥈</button>
       <button class="delete-btn" onclick="removeCardFromMazo(${i})">✕</button>
     </div>`;
   }).join('');
@@ -12595,10 +12640,22 @@ function renderMazoCardsList() {
 
 // Marca una carta del mazo (por índice) como la "principal": la que se
 // muestra en grande en la lista de mazos y en Consulta.
+function setMazoSecundaria(i) {
+  const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
+  if (!mazo || !mazo.cartas[i]) return;
+  const principal = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  if (i === principal) { showToast('Esa ya es la carta principal'); return; }
+  if (mazo.secundaria === i) delete mazo.secundaria; else mazo.secundaria = i;
+  persistAll();
+  renderMazoCardsList();
+  renderMazos(mazoEditingMode);
+}
+
 function setMazoPrincipal(i) {
   const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
   if (!mazo || !mazo.cartas[i]) return;
   mazo.principal = i;
+  if (mazo.secundaria === i) delete mazo.secundaria;
   persistAll();
   renderMazoCardsList();
   renderMazos(mazoEditingMode);
@@ -12653,6 +12710,11 @@ function removeCardFromMazo(i) {
   else if (i < mazo.principal) mazo.principal--;
   else if (i === mazo.principal) mazo.principal = 0;
   if (mazo.principal >= mazo.cartas.length) mazo.principal = Math.max(0, mazo.cartas.length - 1);
+  if (Number.isInteger(mazo.secundaria)) {
+    if (i === mazo.secundaria) delete mazo.secundaria;
+    else if (i < mazo.secundaria) mazo.secundaria--;
+    if (mazo.secundaria >= mazo.cartas.length) delete mazo.secundaria;
+  }
   persistAll();
   renderMazoCardsList();
   renderMazos(mazoEditingMode);
