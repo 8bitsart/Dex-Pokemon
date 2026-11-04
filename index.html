@@ -3708,8 +3708,15 @@
   /* Detalle de un mazo: la carta principal grande y, debajo, la segunda */
   .mazo-public-principal-col { display: flex; flex-direction: column; gap: 10px; }
 
+  /* Número de posición de cada mazo (Consulta) y orden manual (Datos) */
+  .mazo-row-rank { flex: 0 0 26px; text-align: center; font-size: 0.85rem; font-weight: 800; color: var(--muted); }
+  .mazo-pos-input { flex: 0 0 56px; width: 56px; text-align: center; font-weight: 800; background: var(--dark-card); color: var(--text); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 4px; font-family: 'Nunito', sans-serif; }
+  .mazo-mover { flex: 0 0 auto; background: transparent; color: var(--yellow); border: 1px solid var(--yellow); border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+  .mazo-mover:hover:not(:disabled) { background: var(--yellow); color: var(--black); }
+  .mazo-mover:disabled { opacity: 0.3; cursor: default; }
+
   /* Lista de mazos de Consulta (TCG Pocket): la carta principal y una segunda, superpuestas y recortadas abajo */
-  #tcg-mazos-public-list .mazo-row { overflow: hidden; min-height: 84px; padding: 0 14px 0 10px; gap: 14px; border-left: 3px solid var(--yellow); }
+  #tcg-mazos-public-list .mazo-row { overflow: hidden; min-height: 84px; padding: 0 14px 0 8px; gap: 10px; border-left: 3px solid var(--yellow); }
   .mazo-pair { position: relative; flex: 0 0 auto; align-self: stretch; width: 118px; min-height: 84px; overflow: hidden; }
   .mazo-pair-img { position: absolute; top: 9px; width: 62px; height: auto; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,0.6); }
   .mazo-pair-front { left: 28px; z-index: 2; }
@@ -5580,6 +5587,7 @@ function renderTcgMazosPublicList(mode) {
     const detailHTML = expandido ? construirMazoPublicDetailHTML(mazo, tcgData) : '';
     return `
     <div class="mazo-row${expandido ? ' open' : ''}" onclick="toggleMazoPublicDetail(${idx}, this)">
+      <span class="mazo-row-rank">${idx + 1}</span>
       ${thumbHTML}
       <span class="mazo-row-name">${esc(mazo.nombre || 'Sin nombre')}</span>
       <span class="mazo-row-count">${(mazo.cartas || []).length} carta(s)</span>
@@ -12286,6 +12294,9 @@ function renderMazos(mode) {
         : `<div class="mazo-principal-img mazo-principal-img-empty">Sin cartas</div>`;
     return `<div class="mazo-card" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
       <div class="mazo-card-header">
+        <input class="mazo-pos-input" type="number" min="1" max="${store.length}" value="${idx + 1}" title="Posición del mazo en la lista de Consulta: escribí otro número para moverlo" onchange="moverMazoA(${idx}, this.value, '${mode}')" onclick="event.stopPropagation()">
+        <button class="mazo-mover" title="Subir un lugar" ${idx === 0 ? 'disabled' : ''} onclick="moverMazo(${idx}, -1, '${mode}')">▲</button>
+        <button class="mazo-mover" title="Bajar un lugar" ${idx === store.length - 1 ? 'disabled' : ''} onclick="moverMazo(${idx}, 1, '${mode}')">▼</button>
         <input class="mazo-name-input" data-mazo-idx="${idx}" value="${esc(mazo.nombre)}" placeholder="Nombre del mazo (ej: Mazo Control)">
         <button class="delete-btn" onclick="confirmDeleteMazo(${idx}, '${mode}')">🗑️</button>
       </div>
@@ -12351,6 +12362,28 @@ function toggleMazoEditor(idx, mode, wrapEl) {
   mazoEditorOpenKey = key;
   openMazoCardsModal(idx, mode);
 }
+
+// Orden manual de los mazos: el orden de la lista es el que se ve en Consulta (con su número de posición).
+function moverMazoA(idx, destino, mode) {
+  mode = mode || 'mazos';
+  const store = getMazosStore(mode);
+  if (!store[idx]) return;
+  let d = Math.round(Number(destino)) - 1;
+  if (!Number.isFinite(d)) { renderMazos(mode); return; }
+  d = Math.max(0, Math.min(store.length - 1, d));
+  if (d === idx) { renderMazos(mode); return; }
+  // Los índices cambian al mover: si había un editor de cartas abierto, se cierra para que no apunte a otro mazo.
+  const holder = document.getElementById('mazo-editor-holder');
+  const plantilla = document.getElementById('mazo-editor-template');
+  if (holder && plantilla) holder.appendChild(plantilla);
+  mazoEditorOpenKey = null;
+  const [mazo] = store.splice(idx, 1);
+  store.splice(d, 0, mazo);
+  persistAll();
+  renderMazos(mode);
+  showToast('Mazo movido a la posición ' + (d + 1));
+}
+function moverMazo(idx, delta, mode) { moverMazoA(idx, idx + 1 + delta, mode); }
 
 function addNuevoMazo(mode) {
   mode = mode || 'mazos';
