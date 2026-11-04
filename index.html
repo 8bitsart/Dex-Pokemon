@@ -12237,29 +12237,18 @@ function getMazoPrincipal(mazo, tcgData) {
   return { ref, carta: resolverCartaDeRef(ref, cartasRef), idx };
 }
 
-// Segunda carta que se muestra junto a la principal en la lista de mazos de Consulta (como en TCGmini).
-// Se elige en el editor del mazo con el botón 🥈; si no se eligió ninguna, se usa la primera carta de otro
-// Pokémon distinto del principal que tenga imagen.
+// Segunda carta que se muestra junto a la principal en la lista de mazos de Consulta (como en TCGmini) y debajo
+// de la principal grande en el detalle. Solo existe si se eligió a mano en el editor del mazo con el botón 🥈:
+// si no se eligió ninguna (o la elegida no tiene imagen), el mazo muestra una sola carta.
 function getMazoSecundaria(mazo, tcgData) {
   const cartas = mazo.cartas || [];
-  if (cartas.length < 2) return null;
+  if (cartas.length < 2 || !Number.isInteger(mazo.secundaria)) return null;
   const pr = getMazoPrincipal(mazo, tcgData);
-  const resolver = i => {
-    const ref = cartas[i];
-    const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
-    return { ref, carta: resolverCartaDeRef(ref, cartasRef), idx: i };
-  };
-  const conImagen = r => r.carta && r.carta.imagen;
-  if (Number.isInteger(mazo.secundaria) && mazo.secundaria !== pr.idx && cartas[mazo.secundaria]) {
-    const r = resolver(mazo.secundaria);
-    if (conImagen(r)) return r;
-  }
-  const otros = cartas.map((_, i) => i).filter(i => i !== pr.idx);
-  for (const i of otros) {
-    if (cartas[i].pokemon !== (pr.ref && pr.ref.pokemon)) { const r = resolver(i); if (conImagen(r)) return r; }
-  }
-  for (const i of otros) { const r = resolver(i); if (conImagen(r)) return r; }
-  return null;
+  if (mazo.secundaria === pr.idx || !cartas[mazo.secundaria]) return null;
+  const ref = cartas[mazo.secundaria];
+  const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
+  const carta = resolverCartaDeRef(ref, cartasRef);
+  return (carta && carta.imagen) ? { ref, carta, idx: mazo.secundaria } : null;
 }
 
 // Clave del editor de cartas actualmente abierto ("modo-idx"), o null si
