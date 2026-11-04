@@ -3714,6 +3714,8 @@
   .mazo-mover { flex: 0 0 auto; background: transparent; color: var(--yellow); border: 1px solid var(--yellow); border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .mazo-mover:hover:not(:disabled) { background: var(--yellow); color: var(--black); }
   .mazo-mover:disabled { opacity: 0.3; cursor: default; }
+  .mazo-card-row .mazo-pos-input { flex: 0 0 44px; width: 44px; padding: 4px 2px; }
+  .mazo-card-row .mazo-mover { padding: 4px 7px; }
 
   /* Lista de mazos de Consulta (TCG Pocket): la carta principal y una segunda, superpuestas y recortadas abajo */
   #tcg-mazos-public-list .mazo-row { overflow: hidden; min-height: 84px; padding: 0 14px 0 8px; gap: 10px; border-left: 3px solid var(--yellow); }
@@ -12720,11 +12722,14 @@ function renderMazoCardsList() {
       ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}',true,this)" style="cursor:pointer"`
       : '';
     return `<div class="mazo-card-row">
+      <input class="mazo-pos-input" type="number" min="1" max="${mazo.cartas.length}" value="${i + 1}" title="Posición de la carta en el mazo: escribí otro número para moverla" onchange="moverCartaMazoA(${i}, this.value)">
       ${img ? `<img src="${esc(img)}" class="mazo-card-row-thumb"${clickAttr} onerror="this.style.display='none'">` : `<div class="mazo-card-row-thumb"${clickAttr}></div>`}
       <div class="mazo-card-row-info"${clickAttr}>
         <div class="mazo-card-row-name">${esc(nombreEs)}</div>
         <div class="mazo-card-row-exp">${esc(label)}</div>
       </div>
+      <button class="mazo-mover" title="Subir un lugar" ${i === 0 ? 'disabled' : ''} onclick="moverCartaMazoA(${i}, ${i})">▲</button>
+      <button class="mazo-mover" title="Bajar un lugar" ${i === mazo.cartas.length - 1 ? 'disabled' : ''} onclick="moverCartaMazoA(${i}, ${i + 2})">▼</button>
       <button class="mazo-card-row-star ${esPrincipal ? 'active' : ''}" title="${esPrincipal ? 'Es la carta principal del mazo' : 'Usar como carta principal'}" onclick="setMazoPrincipal(${i})">⭐</button>
       <button class="mazo-card-row-star ${i === secundariaIdx ? 'active' : ''}" title="${i === secundariaIdx ? 'Es la segunda carta del mazo (tocá para quitarla)' : 'Usar como segunda carta (se ve junto a la principal en la lista de mazos)'}" onclick="setMazoSecundaria(${i})">🥈</button>
       <button class="delete-btn" onclick="removeCardFromMazo(${i})">✕</button>
@@ -12734,6 +12739,32 @@ function renderMazoCardsList() {
 
 // Marca una carta del mazo (por índice) como la "principal": la que se
 // muestra en grande en la lista de mazos y en Consulta.
+// Mueve la carta i del mazo a la posición «destino» (1 = primera). La principal ⭐ y la segunda 🥈 siguen
+// siendo las mismas cartas aunque cambie su posición.
+function moverCartaMazoA(i, destino) {
+  const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
+  if (!mazo || !mazo.cartas[i]) return;
+  let d = Math.round(Number(destino)) - 1;
+  if (!Number.isFinite(d)) { renderMazoCardsList(); return; }
+  d = Math.max(0, Math.min(mazo.cartas.length - 1, d));
+  if (d === i) { renderMazoCardsList(); return; }
+  const principalAntes = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const secundariaAntes = Number.isInteger(mazo.secundaria) ? mazo.secundaria : null;
+  const nuevaPos = idx => {                       // dónde queda la carta que estaba en idx
+    if (idx === i) return d;
+    if (i < d && idx > i && idx <= d) return idx - 1;
+    if (i > d && idx >= d && idx < i) return idx + 1;
+    return idx;
+  };
+  const [carta] = mazo.cartas.splice(i, 1);
+  mazo.cartas.splice(d, 0, carta);
+  mazo.principal = nuevaPos(principalAntes);
+  if (secundariaAntes !== null) mazo.secundaria = nuevaPos(secundariaAntes);
+  persistAll();
+  renderMazoCardsList();
+  renderMazos(mazoEditingMode);
+}
+
 function setMazoSecundaria(i) {
   const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
   if (!mazo || !mazo.cartas[i]) return;
