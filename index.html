@@ -11186,6 +11186,19 @@ async function cargarCartasPocketDecks(forzar) {
   }
 }
 
+// Imagen de una carta con varias direcciones: si una no carga, prueba la siguiente (TCGdex en inglés,
+// PocketDecks, flibustier, Limitless…). Si ninguna sirve, muestra «Sin imagen · código y número».
+function imgCartaConRespaldo(cands, etiqueta, estilo) {
+  if (!cands.length) return `<div class="trueque-noimg">Sin imagen${etiqueta ? ' · ' + esc(etiqueta) : ''}</div>`;
+  return `<img src="${esc(cands[0])}" style="${estilo}" alt="" data-card="${esc(etiqueta)}" data-alt="${esc(cands.slice(1).join('|'))}" onerror="trueqeImgFail(this)">`;
+}
+// La dirección de la imagen que realmente se ve en una tarjeta de resultados (la mejor calidad que ofrece TCGdex).
+function imagenCargadaDe(div) {
+  const im = div.querySelector('img[data-card]');
+  const u = im ? (im.currentSrc || im.src || '') : '';
+  return /assets\.tcgdex\.net\/.*\/low\.webp$/.test(u) ? u.replace('/low.webp', '/high.webp') : u;
+}
+
 async function buscarCartasOficialesTcg() {
   const nombre = (tcgEditingPokemon || '').trim();
   const statusEl = document.getElementById('tcg-search-status');
@@ -11222,6 +11235,8 @@ async function buscarCartasOficialesTcg() {
   statusEl.textContent = `${resultadosTcgdex.length} en español oficial (TCGdex)` +
     (resultadosPocketDecks.length ? ` · ${resultadosPocketDecks.length} más (respaldo, se traducen al agregarlas)` : '');
 
+  try { await trueqeEnsurePdMap(); } catch (e) { /* sin PocketDecks se usan las demás fuentes */ }
+
   // TCGdex primero: mostramos la tarjeta con un placeholder y completamos la
   // imagen real cuando llega el detalle (hace falta pedirlo aparte, porque
   // el índice por set no trae la URL de imagen).
@@ -11237,11 +11252,15 @@ async function buscarCartasOficialesTcg() {
       const placeholder = div.querySelector('.tcg-carta-placeholder');
       if (!detalle) { if (placeholder) placeholder.textContent = '❌'; return; }
       const img = detalle.image ? `${detalle.image}/high.webp` : '';
-      const icono = setCodeAIconoUrl((detalle.set && detalle.set.id) || '');
+      const setId = (detalle.set && detalle.set.id) || '';
+      const localId = detalle.localId !== undefined ? String(detalle.localId) : '';
+      const cands = trueqeImageCandidates({ setId, localId, image: img });
+      const etiqueta = setId + (localId ? ' #' + localId : '');
+      const icono = setCodeAIconoUrl(setId);
       div.style.cursor = 'pointer';
       div.title = 'Click para agregar esta carta (español oficial)';
       div.innerHTML = `
-        <img src="${esc(img)}" style="width:100%;border-radius:4px" onerror="this.style.opacity=0.15">
+        ${imgCartaConRespaldo(cands, etiqueta, 'width:100%;border-radius:4px')}
         <div style="font-size:0.65rem;color:var(--muted);margin-top:2px">${esc(detalle.rarity || '')}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px">
           <img src="${icono}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
@@ -11249,7 +11268,7 @@ async function buscarCartasOficialesTcg() {
         </div>
       `;
       div.onclick = () => {
-        agregarCartaDesdeTcgdex(detalle, img);
+        agregarCartaDesdeTcgdex(detalle, imagenCargadaDe(div) || img);
         div.style.border = '2px solid #4CAF50';
         div.style.boxShadow = '0 0 6px rgba(76,175,80,0.5)';
       };
@@ -11259,13 +11278,16 @@ async function buscarCartasOficialesTcg() {
   // Respaldo (PocketDecks): sets que TCGdex todavía no tiene cargados.
   resultadosPocketDecks.forEach(c => {
     const img = c.image_png || '';
+    const mNum = /^(.*?)[-_](\d+)[^\d]*$/.exec(c.id || '');
+    const cands = trueqeImageCandidates({ setId: c.set_code || (mNum ? mNum[1] : ''), localId: mNum ? mNum[2] : '', image: img });
+    const etiqueta = (c.set_code || (mNum ? mNum[1] : '')) + (mNum ? ' #' + mNum[2] : '');
     const icono = setCodeAIconoUrl(c.set_code);
     const nombreEs = traducirExpansionTcgApi(c.set_name);
     const div = document.createElement('div');
     div.style.cssText = 'width:96px;text-align:center;cursor:pointer;border:1px solid #333;border-radius:8px;padding:4px;background:#111';
     div.title = 'Click para agregar esta carta (respaldo — se traduce automáticamente)';
     div.innerHTML = `
-      <img src="${esc(img)}" style="width:100%;border-radius:4px" onerror="this.style.opacity=0.15">
+      ${imgCartaConRespaldo(cands, etiqueta, 'width:100%;border-radius:4px')}
       <div style="font-size:0.65rem;color:var(--muted);margin-top:2px">${esc(mapearRarezaPocketDecks(c.rarity))}</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px">
         <img src="${icono}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
@@ -11273,7 +11295,7 @@ async function buscarCartasOficialesTcg() {
       </div>
     `;
     div.onclick = () => {
-      agregarCartaDesdePocketDecks(c, img);
+      agregarCartaDesdePocketDecks(c, imagenCargadaDe(div) || img);
       div.style.border = '2px solid #4CAF50';
       div.style.boxShadow = '0 0 6px rgba(76,175,80,0.5)';
     };
