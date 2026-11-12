@@ -3364,6 +3364,12 @@
     cursor: pointer;
   }
   #gate-admin-box { display: none; margin-top: 10px; }
+  #gate-reg-box { margin-top: 6px; text-align: left; }
+  .gate-reg-sep { margin: 10px 0 6px; font-size: 0.75rem; color: var(--muted); text-align: center; }
+  .whatsapp-support-btn.gate-crear { border: none; cursor: pointer; width: 100%; max-width: 380px; background: var(--yellow); color: var(--black); font-family: 'Nunito', sans-serif; }
+  .whatsapp-support-btn.gate-crear:hover { filter: brightness(1.1); }
+  #gate-reg-box form { margin: 0; }
+  .u-tag { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 700; background: rgba(255,215,94,0.18); color: #ffd75e; white-space: nowrap; }
   .admin-access { display: flex; align-items: center; gap: 8px; }
   #session-pill {
     display: none;
@@ -3741,22 +3747,40 @@
     <div class="gate-title">8-Bits Pokedex</div>
     <div id="gate-loading" class="gate-sub">Comprobando sesión…</div>
     <div id="gate-forms" style="display:none">
-      <div class="gate-sub">Inicia sesión para entrar</div>
+      <div class="gate-sub" id="gate-sub-text">Escribí tu usuario y contraseña para entrar</div>
       <div id="gate-error" class="gate-error"></div>
-      <form onsubmit="gateLogin(event); return false;">
-        <input class="gate-input" id="gate-user" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
-        <input class="gate-input" id="gate-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
-        <button type="submit" id="gate-submit" class="btn btn-primary" style="width:100%">Entrar</button>
-      </form>
-      <button type="button" class="gate-admin-link" onclick="gateToggleAdmin()">Acceso administrador</button>
-      <div id="gate-admin-box">
-        <input class="gate-input" id="gate-admin-pass" type="password" placeholder="Contraseña de administrador" autocomplete="off" onkeydown="if(event.key==='Enter') gateAdminLogin()">
-        <button type="button" class="btn" style="width:100%;background:var(--purple);color:#fff" onclick="gateAdminLogin()">Entrar como administrador</button>
+
+      <div id="gate-login-view">
+        <form onsubmit="gateLogin(event); return false;">
+          <input class="gate-input" id="gate-user" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="gateAutoProgramar()">
+          <input class="gate-input" id="gate-pass" type="password" placeholder="Contraseña" autocomplete="current-password" oninput="gateAutoProgramar()">
+          <button type="submit" id="gate-submit" style="display:none" tabindex="-1" aria-hidden="true">Entrar</button>
+        </form>
+        <button type="button" class="gate-admin-link" onclick="gateToggleAdmin()">Acceso administrador</button>
+        <div id="gate-admin-box">
+          <input class="gate-input" id="gate-admin-pass" type="password" placeholder="Contraseña de administrador" autocomplete="off" onkeydown="if(event.key==='Enter') gateAdminLogin()">
+          <button type="button" class="btn" style="width:100%;background:var(--purple);color:#fff" onclick="gateAdminLogin()">Entrar como administrador</button>
+        </div>
+      </div>
+
+      <div id="gate-reg-box" style="display:none">
+        <form onsubmit="gateRegistrar(event); return false;">
+          <input class="gate-input" id="gate-reg-user" type="text" placeholder="Usuario * (3 a 20: letras, números, . _ -)" maxlength="20" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <input class="gate-input" id="gate-reg-pass" type="password" placeholder="Contraseña * (mínimo 4 caracteres)" autocomplete="new-password">
+          <input class="gate-input" id="gate-reg-pass2" type="password" placeholder="Repetí la contraseña *" autocomplete="new-password">
+          <div class="gate-reg-sep">Datos opcionales</div>
+          <input class="gate-input" id="gate-reg-tel" type="tel" placeholder="WhatsApp, ej. 5491130136403 o 11 3013-6403" autocomplete="tel" onchange="gateRegSugerirPais()">
+          <select class="gate-input" id="gate-reg-pais"></select>
+          <input class="gate-input" id="gate-reg-go" type="text" inputmode="numeric" placeholder="Código de amigo Pokémon GO (12 dígitos)" autocomplete="off">
+          <input class="gate-input" id="gate-reg-pocket" type="text" inputmode="numeric" placeholder="Código de amigo TCG Pocket (16 dígitos)" autocomplete="off">
+          <button type="submit" id="gate-reg-submit" class="btn btn-primary" style="width:100%">Crear usuario y entrar</button>
+        </form>
       </div>
     </div>
   </div>
+  <button type="button" id="gate-crear-btn" class="whatsapp-support-btn gate-crear" style="display:none" onclick="gateToggleRegistro()"><span>Crear usuario nuevo</span></button>
   <a href="https://chat.whatsapp.com/Bc3MymFtIJ60TOb6RPBqx1?s=cl&amp;p=a&amp;ilr=1" target="_blank" rel="noopener noreferrer" class="whatsapp-support-btn gate-whatsapp">
-        <span>Solicitar usuario nuevo</span>
+        <span>Grupo de WhatsApp</span>
         <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTE3LjQ3MiAxNC4zODJjLS4yOTctLjE0OS0xLjc1OC0uODY3LTIuMDMtLjk2Ny0uMjczLS4wOTktLjQ3MS0uMTQ4LS42Ny4xNS0uMTk3LjI5Ny0uNzY3Ljk2Ni0uOTQgMS4xNjQtLjE3My4xOTktLjM0Ny4yMjMtLjY0NC4wNzUtLjI5Ny0uMTUtMS4yNTUtLjQ2My0yLjM5LTEuNDc1LS44ODMtLjc4OC0xLjQ4LTEuNzYxLTEuNjUzLTIuMDU5LS4xNzMtLjI5Ny0uMDE4LS40NTguMTMtLjYwNi4xMzQtLjEzMy4yOTgtLjM0Ny40NDYtLjUyLjE0OS0uMTc0LjE5OC0uMjk4LjI5OC0uNDk3LjA5OS0uMTk4LjA1LS4zNzEtLjAyNS0uNTItLjA3NS0uMTQ5LS42NjktMS42MTItLjkxNi0yLjIwNy0uMjQyLS41NzktLjQ4Ny0uNS0uNjY5LS41MS0uMTczLS4wMDgtLjM3MS0uMDEtLjU3LS4wMS0uMTk4IDAtLjUyLjA3NC0uNzkyLjM3Mi0uMjcyLjI5Ny0xLjA0IDEuMDE2LTEuMDQgMi40NzkgMCAxLjQ2MiAxLjA2NSAyLjg3NSAxLjIxMyAzLjA3NC4xNDkuMTk4IDIuMDk2IDMuMiA1LjA3NyA0LjQ4Ny43MDkuMzA2IDEuMjYyLjQ4OSAxLjY5NC42MjUuNzEyLjIyNyAxLjM2LjE5NSAxLjg3MS4xMTguNTcxLS4wODUgMS43NTgtLjcxOSAyLjAwNi0xLjQxMy4yNDgtLjY5NC4yNDgtMS4yODkuMTczLTEuNDEzLS4wNzQtLjEyNC0uMjcyLS4xOTgtLjU3LS4zNDd6Ii8+PHBhdGggZD0iTTEyLjAwMSAyQzYuNDc4IDIgMiA2LjQ3OCAyIDEyYzAgMS44Ny41MDUgMy42MjIgMS4zODYgNS4xM0wyIDIybDQuOTk5LTEuMzUyQTkuOTM2IDkuOTM2IDAgMCAwIDEyLjAwMSAyMkMxNy41MjMgMjIgMjIgMTcuNTIzIDIyIDEyUzE3LjUyMyAyIDEyLjAwMSAyem0wIDE4LjE0YTguMTEgOC4xMSAwIDAgMS00LjE0LTEuMTM1bC0uMjk3LS4xNzYtMy4wOS44MzYuODI2LTMuMDE2LS4xOTQtLjMxQTguMTE2IDguMTE2IDAgMSAxIDIwLjEzIDEyYTguMTQgOC4xNCAwIDAgMS04LjEzIDguMTR6Ii8+PC9zdmc+Cg==" alt="WhatsApp" class="whatsapp-logo-img">
       </a>
   <p class="fan-aviso-gate">Proyecto de fans sin fines de lucro, sin relación con Nintendo, Game Freak, Creatures, The Pokémon Company ni Niantic. Pokémon y sus nombres, imágenes y marcas pertenecen a sus respectivos dueños.</p>
@@ -4787,8 +4811,8 @@
 
 <script>
 // ── LOGIN DE ENTRADA A LA PÁGINA ───────────────────────────────────────────
-// Los usuarios los crea el administrador desde Datos → Usuarios y se guardan
-// en la colección 'app_usuarios' de Firestore. La contraseña NO se guarda en
+// Los usuarios se crean solos desde esta pantalla («Crear usuario nuevo») o los crea el administrador
+// desde Datos → Usuarios, y se guardan en la colección 'app_usuarios' de Firestore. La contraseña NO se guarda en
 // claro: se guarda un hash PBKDF2-SHA256 con sal propia de cada usuario.
 // Nota: es una barrera del lado del navegador (la página es estática), sirve
 // para controlar quién entra, no para proteger secretos.
@@ -4824,8 +4848,84 @@ function gateError(msg) {
 function gateShow(which, msg) {
   document.getElementById('gate-loading').style.display = which === 'loading' ? 'block' : 'none';
   document.getElementById('gate-forms').style.display = which === 'forms' ? 'block' : 'none';
+  const crear = document.getElementById('gate-crear-btn');
+  if (crear) crear.style.display = which === 'forms' ? '' : 'none';
   gateError(msg || '');
 }
+// Registro: cada persona crea su propio usuario. Se guarda igual que los que crea el administrador
+// (con la contraseña en hash) y queda marcado con origen: 'registro' para verlo en Datos → Usuarios.
+function gateToggleRegistro() {
+  const reg = document.getElementById('gate-reg-box');
+  const login = document.getElementById('gate-login-view');
+  const abrir = reg.style.display !== 'block';
+  reg.style.display = abrir ? 'block' : 'none';
+  login.style.display = abrir ? 'none' : 'block';
+  document.getElementById('gate-sub-text').textContent = abrir ? 'Creá tu usuario gratis' : 'Escribí tu usuario y contraseña para entrar';
+  document.querySelector('#gate-crear-btn span').textContent = abrir ? 'Ya tengo usuario' : 'Crear usuario nuevo';
+  gateError('');
+  if (abrir) {
+    try { usuarioPoblarPaises(document.getElementById('gate-reg-pais'), ''); } catch (e) {}
+    document.getElementById('gate-reg-user').focus();
+  }
+}
+function gateRegSugerirPais() {
+  try {
+    const sel = document.getElementById('gate-reg-pais');
+    if (!sel || sel.value) return;
+    const tel = usuarioNormTel(document.getElementById('gate-reg-tel').value);
+    const cod = PAIS_POR_PREFIJO[tel.slice(0, 3)] || PAIS_POR_PREFIJO[tel.slice(0, 2)];
+    if (cod) sel.value = cod;
+  } catch (e) {}
+}
+async function gateRegistrar(ev) {
+  if (ev) ev.preventDefault();
+  gateError('');
+  const val = id => document.getElementById(id).value;
+  const usuario = val('gate-reg-user').trim();
+  const usuarioNorm = gateNormUser(usuario);
+  const tel = usuarioNormTel(val('gate-reg-tel'));
+  const pass = val('gate-reg-pass');
+  const pais = val('gate-reg-pais') || '';
+  const codigoGo = codigoNorm(val('gate-reg-go'));
+  const codigoPocket = codigoNorm(val('gate-reg-pocket'));
+  const sinIcono = t => String(t).replace(/^⚠️\s*/, '');
+  if (!USUARIO_RE.test(usuarioNorm)) { gateError('Usuario no válido: 3 a 20 caracteres (letras, números, punto, guion o guion bajo, sin espacios).'); return; }
+  if (tel && !usuarioTelValido(tel)) { gateError(sinIcono(usuarioMsgTelInvalido(tel))); return; }
+  if (pass.length < 4) { gateError('La contraseña debe tener al menos 4 caracteres.'); return; }
+  if (pass !== val('gate-reg-pass2')) { gateError('Las contraseñas no coinciden.'); return; }
+  if (!codigoValido(codigoGo, 'go')) { gateError(sinIcono(codigoMsgInvalido(codigoGo, 'go'))); return; }
+  if (!codigoValido(codigoPocket, 'pocket')) { gateError(sinIcono(codigoMsgInvalido(codigoPocket, 'pocket'))); return; }
+  if (!window._fbDb) { gateError('Todavía no se conectó. Espera un momento e inténtalo de nuevo.'); return; }
+  const btn = document.getElementById('gate-reg-submit');
+  btn.disabled = true;
+  try {
+    const col = window._fbDb.collection(APP_USERS_COL);
+    const [dupUser, dupTel] = await Promise.all([
+      col.where('usuarioNorm', '==', usuarioNorm).limit(1).get(),
+      tel ? col.where('whatsapp', '==', tel).limit(1).get() : Promise.resolve({ empty: true })
+    ]);
+    if (!dupUser.empty) { gateError('Ese nombre de usuario ya existe. Elegí otro.'); return; }
+    if (!dupTel.empty) { gateError('Ese WhatsApp ya está registrado con otro usuario. Si es tuyo, iniciá sesión con ese usuario o pedí ayuda en el grupo de WhatsApp.'); return; }
+    const salt = gateNewSalt();
+    const hash = await gateHashPassword(pass, salt);
+    const ref = await col.add({
+      usuario, usuarioNorm, whatsapp: tel, pais, codigoGo, codigoPocket, salt, hash,
+      origen: 'registro',
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const session = { tipo: 'user', id: ref.id, usuario, whatsapp: tel, hv: hash.slice(0, 16) };
+    try { localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    gateOpen(session, 'login');
+  } catch (e) {
+    console.error('Registro:', e);
+    if (e && e.message === 'crypto') gateError('Este navegador no permite crear contraseñas seguras (hace falta abrir la página con HTTPS).');
+    else if (e && e.code === 'permission-denied') gateError('Todavía no se pueden crear usuarios desde acá: faltan permisos en la base de datos. Avisale al administrador.');
+    else gateError('No se pudo crear el usuario' + (e && e.code ? ' (' + e.code + ')' : '') + '. Revisá tu internet.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function gateToggleAdmin() {
   const box = document.getElementById('gate-admin-box');
   box.style.display = box.style.display === 'block' ? 'none' : 'block';
@@ -4959,26 +5059,47 @@ async function gateInit() {
   gateShow('forms', aviso);
 }
 
-async function gateLogin(ev) {
+// Entrada automática: al completar usuario y contraseña la página prueba sola, sin tocar «Entrar».
+// Mientras se escribe no molesta con avisos: si no coincide, espera a que se deje de escribir un momento.
+let gateAutoTimer = null, gateAutoErrTimer = null, gateLoginBusy = false;
+let gateUserCache = null;   // { usuario, id, d } del último usuario consultado, para no volver a pedirlo a cada letra
+function gateAutoProgramar() {
+  clearTimeout(gateAutoTimer); clearTimeout(gateAutoErrTimer);
+  gateError('');
+  if (!gateNormUser(document.getElementById('gate-user').value) || !document.getElementById('gate-pass').value) return;
+  gateAutoTimer = setTimeout(() => gateLogin(null, true), 600);
+}
+
+async function gateLogin(ev, auto) {
   if (ev) ev.preventDefault();
+  clearTimeout(gateAutoTimer); clearTimeout(gateAutoErrTimer);
+  if (gateLoginBusy) { if (auto) gateAutoTimer = setTimeout(() => gateLogin(null, true), 400); return; }
   const usuario = gateNormUser(document.getElementById('gate-user').value);
   const pass = document.getElementById('gate-pass').value;
   gateError('');
-  if (!usuario || !pass) { gateError('Escribe tu usuario y tu contraseña.'); return; }
-  if (!window._fbDb) { gateError('Todavía no se conectó. Espera un momento e inténtalo de nuevo.'); return; }
+  if (!usuario || !pass) { if (!auto) gateError('Escribe tu usuario y tu contraseña.'); return; }
+  if (!window._fbDb) { if (!auto) gateError('Todavía no se conectó. Espera un momento e inténtalo de nuevo.'); return; }
   const btn = document.getElementById('gate-submit');
+  gateLoginBusy = true;
   btn.disabled = true;
   try {
-    const snap = await window._fbDb.collection(APP_USERS_COL).where('usuarioNorm', '==', usuario).limit(1).get();
-    let ok = false, d = null, id = null;
-    if (!snap.empty) {
-      id = snap.docs[0].id;
-      d = snap.docs[0].data();
-      ok = (await gateHashPassword(pass, d.salt)) === d.hash;
+    if (!gateUserCache || gateUserCache.usuario !== usuario) {
+      const snap = await window._fbDb.collection(APP_USERS_COL).where('usuarioNorm', '==', usuario).limit(1).get();
+      gateUserCache = snap.empty ? { usuario, id: null, d: null } : { usuario, id: snap.docs[0].id, d: snap.docs[0].data() };
     }
+    const { id, d } = gateUserCache;
+    const ok = !!d && (await gateHashPassword(pass, d.salt)) === d.hash;
     if (!ok) {
-      gateError('Usuario o contraseña incorrectos.');
-      document.getElementById('gate-pass').value = '';
+      if (auto) {
+        const antes = usuario + '\n' + pass;
+        gateAutoErrTimer = setTimeout(() => {
+          const ahora = gateNormUser(document.getElementById('gate-user').value) + '\n' + document.getElementById('gate-pass').value;
+          if (ahora === antes) gateError('Usuario o contraseña incorrectos.');
+        }, 1800);
+      } else {
+        gateError('Usuario o contraseña incorrectos.');
+        document.getElementById('gate-pass').value = '';
+      }
       return;
     }
     const session = { tipo: 'user', id, usuario: d.usuario, whatsapp: d.whatsapp, hv: d.hash.slice(0, 16) };
@@ -4990,6 +5111,7 @@ async function gateLogin(ev) {
     else if (e && e.code === 'permission-denied') gateError('No se pudo comprobar el acceso: faltan permisos en las reglas de Firestore para "app_usuarios".');
     else gateError('No se pudo conectar' + (e && e.code ? ' (' + e.code + ')' : '') + '. Revisa tu internet.');
   } finally {
+    gateLoginBusy = false;
     btn.disabled = false;
   }
 }
@@ -14480,8 +14602,8 @@ function renderUsuarios() {
     const fecha = (u.creado && u.creado.toDate) ? u.creado.toDate().toLocaleDateString('es') : '';
     return `<tr>
       <td class="u-num">${i + 1}</td>
-      <td class="u-name">👤 ${usuarioEsc(u.usuario)}</td>
-      <td>📞 ${usuarioEsc(u.whatsapp)}</td>
+      <td class="u-name">👤 ${usuarioEsc(u.usuario)}${u.origen === 'registro' ? ' <span class="u-tag" title="Creó su usuario desde la pantalla de acceso">se registró solo</span>' : ''}</td>
+      <td>📞 ${usuarioEsc(u.whatsapp) || '<span class="u-offline">—</span>'}</td>
       <td>${banderaHtml(u.pais)}${usuarioEsc(paisNombre(u.pais)) || '<span class="u-offline">Sin país</span>'}
         <div class="u-code-line">GO: <b class="u-cod">${usuarioEsc(codigoFormat(u.codigoGo)) || '—'}</b></div>
         <div class="u-code-line">Pocket: <b class="u-cod">${usuarioEsc(codigoFormat(u.codigoPocket)) || '—'}</b></div>
