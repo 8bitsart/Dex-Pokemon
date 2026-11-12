@@ -3808,7 +3808,7 @@
     <button class="tab-btn datos" id="tab-datos" onclick="showTab('datos')" style="display:none">🔧 Datos</button>
   </div>
   <div class="admin-access" id="admin-access">
-    <div id="session-pill"><span id="session-pill-name"></span><button type="button" onclick="appLogout()">Salir</button></div>
+    <div id="session-pill"><span id="session-pill-name"></span><button type="button" id="session-pill-perfil" style="display:none" onclick="abrirMiPerfil()">Mi perfil</button><button type="button" onclick="appLogout()">Salir</button></div>
     <input
       type="password"
       id="admin-pass-input"
@@ -4760,6 +4760,39 @@
   </div>
 </div>
 
+<!-- MI PERFIL (lo abre cada usuario desde la barra de sesión) -->
+<div class="modal-overlay" id="modal-mi-perfil">
+  <div class="modal" style="max-width:520px">
+    <h3>MI PERFIL: <span id="mp-nombre"></span></h3>
+    <p>Completá tus datos cuando quieras. El país y los códigos se muestran junto a tus publicaciones de intercambio. El WhatsApp solo lo ve el administrador.</p>
+    <div class="usuarios-add">
+      <div>
+        <label class="u-label" for="mp-tel">WhatsApp (opcional)</label>
+        <input class="gate-input" id="mp-tel" type="tel" placeholder="Ej. 5491130136403 o 11 3013-6403" autocomplete="tel" onchange="miPerfilSugerirPais()">
+      </div>
+      <div>
+        <label class="u-label" for="mp-pais">País</label>
+        <div class="u-pais-row">
+          <select class="gate-input" id="mp-pais" onchange="usuarioActualizarBandera('mp-pais','mp-flag')"></select>
+          <span id="mp-flag"></span>
+        </div>
+      </div>
+      <div>
+        <label class="u-label" for="mp-go">Código de entrenador de Pokémon GO (12 dígitos)</label>
+        <input class="gate-input" id="mp-go" type="text" inputmode="numeric" placeholder="1234 5678 9012" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="mp-pocket">ID de jugador de TCG Pocket (16 dígitos)</label>
+        <input class="gate-input" id="mp-pocket" type="text" inputmode="numeric" placeholder="1234 5678 9012 3456" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="guardarMiPerfil()">Guardar</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-yellow" onclick="closeModal('modal-mi-perfil')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL USUARIOS DE LA APP -->
 <div class="modal-overlay" id="modal-usuarios">
   <div class="modal" style="max-width:560px">
@@ -4982,6 +5015,8 @@ function gateOpen(session, via) {
   const pill = document.getElementById('session-pill');
   if (pill) {
     document.getElementById('session-pill-name').textContent = session.tipo === 'admin' ? '👑 Administrador' : '👤 ' + session.usuario;
+    const btnPerfil = document.getElementById('session-pill-perfil');
+    if (btnPerfil) btnPerfil.style.display = session.tipo === 'user' ? '' : 'none';
     pill.style.display = 'flex';
   }
 }
@@ -14792,6 +14827,77 @@ async function guardarPerfilUsuario() {
   closeModal('modal-usuario-perfil');
   showToast('✅ País y códigos guardados');
   await cargarUsuarios();
+}
+
+// ── MI PERFIL: cada usuario completa o corrige su WhatsApp, país y códigos ──
+async function abrirMiPerfil() {
+  const sesion = window.appSession;
+  if (!sesion || sesion.tipo !== 'user' || !window._fbDb) return;
+  document.getElementById('mp-nombre').textContent = sesion.usuario;
+  let d = {};
+  try {
+    const doc = await window._fbDb.collection(APP_USERS_COL).doc(sesion.id).get();
+    if (doc.exists) d = doc.data();
+  } catch (e) { console.warn('No se pudo leer el perfil', e); }
+  document.getElementById('mp-tel').value = d.whatsapp || '';
+  usuarioPoblarPaises(document.getElementById('mp-pais'), d.pais || '');
+  usuarioActualizarBandera('mp-pais', 'mp-flag');
+  document.getElementById('mp-go').value = codigoFormat(d.codigoGo);
+  document.getElementById('mp-pocket').value = codigoFormat(d.codigoPocket);
+  document.getElementById('modal-mi-perfil').classList.add('open');
+}
+
+function miPerfilSugerirPais() {
+  const sel = document.getElementById('mp-pais');
+  if (!sel || sel.value) return;
+  const tel = usuarioNormTel(document.getElementById('mp-tel').value);
+  const cod = PAIS_POR_PREFIJO[tel.slice(0, 3)] || PAIS_POR_PREFIJO[tel.slice(0, 2)];
+  if (cod) { sel.value = cod; usuarioActualizarBandera('mp-pais', 'mp-flag'); }
+}
+
+async function guardarMiPerfil() {
+  const sesion = window.appSession;
+  if (!sesion || sesion.tipo !== 'user') return;
+  if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
+  const tel = usuarioNormTel(document.getElementById('mp-tel').value);
+  const pais = document.getElementById('mp-pais').value;
+  const go = codigoNorm(document.getElementById('mp-go').value);
+  const pocket = codigoNorm(document.getElementById('mp-pocket').value);
+  if (tel && !usuarioTelValido(tel)) { showToast(usuarioMsgTelInvalido(tel), true); return; }
+  if (!codigoValido(go, 'go')) { showToast(codigoMsgInvalido(go, 'go'), true); return; }
+  if (!codigoValido(pocket, 'pocket')) { showToast(codigoMsgInvalido(pocket, 'pocket'), true); return; }
+  const db = window._fbDb;
+  try {
+    if (tel) {
+      const dup = await db.collection(APP_USERS_COL).where('whatsapp', '==', tel).limit(2).get();
+      if (dup.docs.some(x => x.id !== sesion.id)) { showToast('⚠️ Ese WhatsApp ya está registrado con otro usuario.', true); return; }
+    }
+    await db.collection(APP_USERS_COL).doc(sesion.id).update({ whatsapp: tel, pais, codigoGo: go, codigoPocket: pocket });
+  } catch (e) {
+    console.error(e);
+    showToast(e && e.code === 'permission-denied'
+      ? '❌ Todavía no se pueden guardar los datos desde acá: faltan permisos en la base de datos. Avisale al administrador.'
+      : '❌ No se pudo guardar. Revisá tu internet.', true);
+    return;
+  }
+  sesion.whatsapp = tel;
+  try {
+    const guardada = JSON.parse(localStorage.getItem(APP_SESSION_KEY) || 'null');
+    if (guardada && guardada.id === sesion.id) { guardada.whatsapp = tel; localStorage.setItem(APP_SESSION_KEY, JSON.stringify(guardada)); }
+  } catch (e) {}
+  // Sus publicaciones ya hechas muestran el país y el código nuevos (si las reglas lo permiten).
+  try {
+    const [a, b] = await Promise.all([
+      db.collection('trueques_cartas').where('userId', '==', sesion.id).get(),
+      db.collection('trueques_go').where('userId', '==', sesion.id).get()
+    ]);
+    const batch = db.batch();
+    a.forEach(x => batch.update(x.ref, { userPais: pais, userCodigo: pocket }));
+    b.forEach(x => batch.update(x.ref, { userPais: pais, userCodigo: go }));
+    if (a.size + b.size) await batch.commit();
+  } catch (e) { console.warn('No se pudieron actualizar las publicaciones', e); }
+  closeModal('modal-mi-perfil');
+  showToast('✅ Datos guardados');
 }
 
 // Borra el campo userWhatsapp de las publicaciones antiguas de intercambios,
