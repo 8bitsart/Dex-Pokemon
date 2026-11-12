@@ -3720,6 +3720,9 @@
   .mazo-mover { flex: 0 0 auto; background: transparent; color: var(--yellow); border: 1px solid var(--yellow); border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .mazo-mover:hover:not(:disabled) { background: var(--yellow); color: var(--black); }
   .mazo-mover:disabled { opacity: 0.3; cursor: default; }
+  .mazo-dos { display: flex; gap: 8px; flex-shrink: 0; }
+  .mazo-dos-item { position: relative; display: block; flex-shrink: 0; }
+  .mazo-dos-tag { position: absolute; top: -6px; left: -6px; z-index: 1; font-size: 0.8rem; line-height: 1.2; padding: 1px 4px; border-radius: 10px; background: rgba(0,0,0,0.7); pointer-events: none; }
   .mazo-card-row .mazo-pos-input { flex: 0 0 44px; width: 44px; padding: 4px 2px; }
   .mazo-card-row .mazo-mover { padding: 4px 7px; }
 
@@ -12440,6 +12443,17 @@ function renderMazos(mode) {
       : ref
         ? `<div class="mazo-principal-img mazo-principal-img-empty">${esc(traducirNombrePokemon(ref.pokemon))}</div>`
         : `<div class="mazo-principal-img mazo-principal-img-empty">Sin cartas</div>`;
+    // La segunda carta, tal como la ve Consulta: solo existe si se eligió con el 🥈 dentro del mazo.
+    const seg = getMazoSecundaria(mazo, tcgData);
+    const segImg = seg
+      ? `<img src="${esc(seg.carta.imagen)}" class="mazo-principal-img" onerror="this.style.display='none'">`
+      : `<div class="mazo-principal-img mazo-principal-img-empty">Sin segunda carta</div>`;
+    const dosHTML = `<span class="mazo-dos">
+          <span class="mazo-dos-item">${principalHTML}<span class="mazo-dos-tag" title="Carta principal">⭐</span></span>
+          ${mazo.cartas.length >= 2 ? `<span class="mazo-dos-item">${segImg}<span class="mazo-dos-tag" title="Segunda carta">🥈</span></span>` : ''}
+        </span>`;
+    const avisoSeg = (mazo.cartas.length >= 2 && !seg)
+      ? '<div class="mazo-principal-hint" style="color:#ffd75e">Sin segunda carta: en Consulta se ve una sola. Elegila con el 🥈 dentro del mazo.</div>' : '';
     return `<div class="mazo-card" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
       <div class="mazo-card-header">
         <input class="mazo-pos-input" type="number" min="1" max="${store.length}" value="${idx + 1}" title="Posición del mazo en la lista de Consulta: escribí otro número para moverlo" onchange="moverMazoA(${idx}, this.value, '${mode}')" onclick="event.stopPropagation()">
@@ -12449,10 +12463,11 @@ function renderMazos(mode) {
         <button class="delete-btn" onclick="confirmDeleteMazo(${idx}, '${mode}')">🗑️</button>
       </div>
       <div class="mazo-principal-wrap" onclick="toggleMazoEditor(${idx}, '${mode}', this)">
-        ${principalHTML}
+        ${dosHTML}
         <div class="mazo-principal-info">
           <div class="mazo-principal-count">${mazo.cartas.length}/${MAZO_MAX_CARTAS} cartas</div>
           ${mazo.cartas.length ? '<div class="mazo-principal-hint">Toca para ver y editar todas las cartas</div>' : '<div class="mazo-principal-hint">Toca para agregar la primera carta</div>'}
+          ${avisoSeg}
         </div>
         <span class="mazo-principal-arrow">▾</span>
       </div>
