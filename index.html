@@ -3720,6 +3720,10 @@
   .mazo-mover { flex: 0 0 auto; background: transparent; color: var(--yellow); border: 1px solid var(--yellow); border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .mazo-mover:hover:not(:disabled) { background: var(--yellow); color: var(--black); }
   .mazo-mover:disabled { opacity: 0.3; cursor: default; }
+  .mazo-limite-nota { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem; line-height: 1.4; color: #ffd75e; background: rgba(255,215,94,0.1); border: 1px solid rgba(255,215,94,0.3); }
+  .mazo-card.fuera-top { opacity: 0.6; border-style: dashed; }
+  .mazo-card.fuera-top:hover, .mazo-card.fuera-top.open { opacity: 1; }
+  .mazo-fuera-aviso { margin: 6px 0 2px; font-size: 0.72rem; font-weight: 700; color: #ffd75e; }
   .mazo-dos { display: flex; gap: 8px; flex-shrink: 0; }
   .mazo-dos-item { position: relative; display: block; flex-shrink: 0; }
   .mazo-dos-tag { position: absolute; top: -6px; left: -6px; z-index: 1; font-size: 0.8rem; line-height: 1.2; padding: 1px 4px; border-radius: 10px; background: rgba(0,0,0,0.7); pointer-events: none; }
@@ -5738,7 +5742,7 @@ function renderTcgMazosPublicList(mode) {
     return;
   }
   const expandido = tcgMazosVistaModo === 'expandido';
-  listEl.innerHTML = store.map((mazo, idx) => {
+  listEl.innerHTML = store.slice(0, TCG_MAZOS_VISIBLES).map((mazo, idx) => {
     const { carta } = getMazoPrincipal(mazo, tcgData);
     const seg = getMazoSecundaria(mazo, tcgData);
     const img1 = carta && carta.imagen ? `<img src="${esc(carta.imagen)}" class="mazo-pair-img mazo-pair-front" alt="" onerror="this.style.display='none'">` : '';
@@ -12389,6 +12393,9 @@ function renderMazosTcgTable(mode) { renderTableTCG(); }
 // Máximo de cartas por mazo (tamaño real de un mazo de TCG Pocket).
 const MAZO_MAX_CARTAS = 20;
 
+// Cuántos mazos se muestran en Consulta: los primeros según el orden armado en Datos. Los demás quedan guardados.
+const TCG_MAZOS_VISIBLES = 10;
+
 // Devuelve la carta marcada como "principal" de un mazo (o la primera si
 // todavía no se eligió ninguna), junto a su índice real dentro de mazo.cartas.
 function getMazoPrincipal(mazo, tcgData) {
@@ -12436,7 +12443,9 @@ function renderMazos(mode) {
     list.innerHTML = '<div class="mazo-empty-hint">No hay mazos creados todavía. Toca "➕ Nuevo mazo" para crear el primero.</div>';
     return;
   }
-  list.innerHTML = store.map((mazo, idx) => {
+  const notaLimite = store.length > TCG_MAZOS_VISIBLES
+    ? `<div class="mazo-limite-nota">Consulta muestra solo los primeros ${TCG_MAZOS_VISIBLES} mazos de esta lista. Los demás quedan guardados: para mostrarlos, subilos con ▲ o escribí una posición menor.</div>` : '';
+  list.innerHTML = notaLimite + store.map((mazo, idx) => {
     const { carta, ref } = getMazoPrincipal(mazo, tcgData);
     const principalHTML = carta && carta.imagen
       ? `<img src="${esc(carta.imagen)}" class="mazo-principal-img" onerror="this.style.display='none'">`
@@ -12454,7 +12463,7 @@ function renderMazos(mode) {
         </span>`;
     const avisoSeg = (mazo.cartas.length >= 2 && !seg)
       ? '<div class="mazo-principal-hint" style="color:#ffd75e">Sin segunda carta: en Consulta se ve una sola. Elegila con el 🥈 dentro del mazo.</div>' : '';
-    return `<div class="mazo-card" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
+    return `<div class="mazo-card${idx >= TCG_MAZOS_VISIBLES ? ' fuera-top' : ''}" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
       <div class="mazo-card-header">
         <input class="mazo-pos-input" type="number" min="1" max="${store.length}" value="${idx + 1}" title="Posición del mazo en la lista de Consulta: escribí otro número para moverlo" onchange="moverMazoA(${idx}, this.value, '${mode}')" onclick="event.stopPropagation()">
         <button class="mazo-mover" title="Subir un lugar" ${idx === 0 ? 'disabled' : ''} onclick="moverMazo(${idx}, -1, '${mode}')">▲</button>
@@ -12462,6 +12471,7 @@ function renderMazos(mode) {
         <input class="mazo-name-input" data-mazo-idx="${idx}" value="${esc(mazo.nombre)}" placeholder="Nombre del mazo (ej: Mazo Control)">
         <button class="delete-btn" onclick="confirmDeleteMazo(${idx}, '${mode}')">🗑️</button>
       </div>
+      ${idx >= TCG_MAZOS_VISIBLES ? `<div class="mazo-fuera-aviso">Fuera de los primeros ${TCG_MAZOS_VISIBLES}: no se muestra en Consulta</div>` : ''}
       <div class="mazo-principal-wrap" onclick="toggleMazoEditor(${idx}, '${mode}', this)">
         ${dosHTML}
         <div class="mazo-principal-info">
