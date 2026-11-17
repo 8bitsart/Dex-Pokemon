@@ -4825,6 +4825,10 @@
         <input class="gate-input" id="up-go" type="text" inputmode="numeric" placeholder="1234 5678 9012" autocomplete="off">
       </div>
       <div>
+        <label class="u-label" for="up-nickpocket">Nick de TCG Pocket (si es distinto al de Pokémon GO)</label>
+        <input class="gate-input" id="up-nickpocket" type="text" maxlength="30" placeholder="Nick en TCG Pocket" autocomplete="off">
+      </div>
+      <div>
         <label class="u-label" for="up-pocket">ID de jugador de TCG Pocket (16 dígitos)</label>
         <input class="gate-input" id="up-pocket" type="text" inputmode="numeric" placeholder="1234 5678 9012 3456" autocomplete="off">
       </div>
@@ -4856,6 +4860,10 @@
       <div>
         <label class="u-label" for="mp-go">Código de entrenador de Pokémon GO (12 dígitos)</label>
         <input class="gate-input" id="mp-go" type="text" inputmode="numeric" placeholder="1234 5678 9012" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="mp-nickpocket">Nick de TCG Pocket (si es distinto al de Pokémon GO)</label>
+        <input class="gate-input" id="mp-nickpocket" type="text" maxlength="30" placeholder="Nick en TCG Pocket" autocomplete="off">
       </div>
       <div>
         <label class="u-label" for="mp-equipo">Equipo de Pokémon GO</label>
@@ -14924,6 +14932,7 @@ function abrirPerfilUsuario(id) {
   document.getElementById('up-go').value = codigoFormat(u.codigoGo);
   document.getElementById('up-pocket').value = codigoFormat(u.codigoPocket);
   document.getElementById('up-equipo').value = u.equipoGo || '';
+  document.getElementById('up-nickpocket').value = u.nickPocket || '';
   document.getElementById('modal-usuario-perfil').classList.add('open');
 }
 
@@ -14937,9 +14946,10 @@ async function guardarPerfilUsuario() {
   if (!codigoValido(pocket, 'pocket')) { showToast(codigoMsgInvalido(pocket, 'pocket'), true); return; }
   try {
     const equipoGo = document.getElementById('up-equipo').value;
-    await window._fbDb.collection(APP_USERS_COL).doc(id).update({ pais, codigoGo: go, codigoPocket: pocket, equipoGo });
+    const nickPocket = document.getElementById('up-nickpocket').value.trim();
+    await window._fbDb.collection(APP_USERS_COL).doc(id).update({ pais, codigoGo: go, codigoPocket: pocket, equipoGo, nickPocket });
     const uu = usuariosCache.find(x => x.id === id) || {};
-    codigosPublicar(id, { usuario: uu.usuario, equipoGo, pais, codigoGo: go, codigoPocket: pocket });
+    codigosPublicar(id, { usuario: uu.usuario, nickPocket, equipoGo, pais, codigoGo: go, codigoPocket: pocket });
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo guardar el perfil.', true);
@@ -14978,6 +14988,7 @@ async function abrirMiPerfil() {
   document.getElementById('mp-go').value = codigoFormat(d.codigoGo);
   document.getElementById('mp-pocket').value = codigoFormat(d.codigoPocket);
   document.getElementById('mp-equipo').value = d.equipoGo || '';
+  document.getElementById('mp-nickpocket').value = d.nickPocket || '';
   document.getElementById('modal-mi-perfil').classList.add('open');
 }
 
@@ -15006,7 +15017,7 @@ async function guardarMiPerfil() {
       const dup = await db.collection(APP_USERS_COL).where('whatsapp', '==', tel).limit(2).get();
       if (dup.docs.some(x => x.id !== sesion.id)) { showToast('⚠️ Ese WhatsApp ya está registrado con otro usuario.', true); return; }
     }
-    await db.collection(APP_USERS_COL).doc(sesion.id).update({ whatsapp: tel, pais, codigoGo: go, codigoPocket: pocket, equipoGo: document.getElementById('mp-equipo').value });
+    await db.collection(APP_USERS_COL).doc(sesion.id).update({ whatsapp: tel, pais, codigoGo: go, codigoPocket: pocket, equipoGo: document.getElementById('mp-equipo').value, nickPocket: document.getElementById('mp-nickpocket').value.trim() });
   } catch (e) {
     console.error(e);
     showToast(e && e.code === 'permission-denied'
@@ -17603,7 +17614,7 @@ async function codigosPublicar(id, d) {
   if (!window._fbDb || !id) return false;
   try {
     await window._fbDb.collection(CODIGOS_COL).doc(id).set({
-      usuario: d.usuario || '', equipoGo: d.equipoGo || '', pais: d.pais || '',
+      usuario: d.usuario || '', nickPocket: d.nickPocket || '', equipoGo: d.equipoGo || '', pais: d.pais || '',
       codigoGo: codigoNorm(d.codigoGo), codigoPocket: codigoNorm(d.codigoPocket)
     });
     return true;
@@ -17641,7 +17652,7 @@ async function codigosCargar() {
     filas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) {
     console.warn(e);
-    aviso.textContent = 'No se pudo cargar la lista. Falta dar permiso de lectura a la colección «' + CODIGOS_COL + '» en Firebase.';
+    aviso.style.display = 'none';
     return;
   }
   if (juego !== codigosGame) return;
@@ -17656,7 +17667,7 @@ async function codigosCargar() {
   aviso.style.display = 'none';
   lista.innerHTML = filas.map(f => {
     const cod = codigoNorm(juego === 'go' ? f.codigoGo : f.codigoPocket);
-    const nick = usuarioEsc(f.usuario || '');
+    const nick = usuarioEsc((juego === 'pocket' && f.nickPocket) ? f.nickPocket : (f.usuario || ''));
     let ficha;
     if (juego === 'go') {
       const eq = CODIGOS_EQUIPOS[f.equipoGo];
@@ -17664,7 +17675,7 @@ async function codigosCargar() {
         : (eq.imagen ? '<img class="cf-img" src="' + eq.imagen + '" alt="Equipo ' + eq.nombre + '" title="Equipo ' + eq.nombre + '">'
                      : '<div class="cf-ph" style="background:' + eq.color + '" title="Equipo ' + eq.nombre + '">' + eq.nombre.charAt(0) + '</div>');
     } else {
-      ficha = '<div class="cf-ph">' + (banderaHtml(f.pais) || usuarioEsc(String(f.usuario || '?').charAt(0).toUpperCase())) + '</div>';
+      ficha = '';
     }
     const mio = s && s.id === f.id ? ' mio' : '';
     return '<div class="codigo-fila' + mio + '">' + ficha +
