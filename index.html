@@ -4565,6 +4565,15 @@
       Escribe una copa por línea (opcional: <b>Nombre | URL del logo</b>). Los logos se buscan solos en WikiDex; si alguno no aparece, pega la URL de la imagen en su fila.
       «Usa datos de» indica de qué liga (Super/Ultra/Master) toma Nivel, CP, Stats e IV al consultarla.
     </p>
+    <div style="background:var(--dark-card);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:0.85rem;margin-bottom:6px"><b>Importar desde WikiDex</b> (nombres y logos)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="copas-wiki-pagina" type="text" value="Liga Combates GO" title="Título de la página de WikiDex que lista las copas" style="flex:1 1 200px;min-width:0;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:inherit;font:inherit">
+        <button type="button" class="btn btn-primary" onclick="copasGOImportarWiki()">📥 Importar copas</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">Si esa página no existe o no lista copas, se buscan en todo WikiDex. Antes de añadir verás la lista para desmarcar lo que no sirva.</div>
+      <div id="copas-wiki-previa" style="margin-top:8px"></div>
+    </div>
     <textarea id="copas-nuevas" rows="4" placeholder="Copa Retro&#10;Copa Fantasía&#10;Copa Verano | https://…/logo.png" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:inherit;font:inherit"></textarea>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
       <label style="font-size:0.8rem">Usa datos de:</label>
@@ -8124,6 +8133,87 @@ async function wikidexBuscarLogo(nombre) {
   return null;
 }
 
+// Llamada genérica a la API de WikiDex (prueba las dos rutas posibles).
+async function wikidexApi(params) {
+  let ultimo = '';
+  for (const api of (wikidexApiOk ? [wikidexApiOk] : WIKIDEX_APIS)) {
+    try {
+      const j = await pvpokeFetchJson(`${api}?${params}&format=json&origin=*`, 20000);
+      wikidexApiOk = api;
+      return j;
+    } catch (e) { ultimo = e.name === 'AbortError' ? 'sin respuesta' : e.message; }
+  }
+  wikidexUltimoError = ultimo;
+  throw new Error(ultimo || 'sin conexión');
+}
+// Imagen principal de la página de una copa (respaldo si no hay un archivo con su nombre).
+async function wikidexLogoDePagina(titulo) {
+  try {
+    const j = await wikidexApi(`action=query&prop=pageimages&piprop=thumbnail&pithumbsize=128&redirects=1&titles=${encodeURIComponent(titulo)}`);
+    const pages = (j.query && j.query.pages) ? Object.values(j.query.pages) : [];
+    const t = pages.find(p => p.thumbnail && p.thumbnail.source);
+    return t ? t.thumbnail.source : null;
+  } catch (e) { return null; }
+}
+let wikidexCandidatas = [];
+function wikidexNombreDeTitulo(t) { return nombreCopaLimpio(String(t).replace(/\s*\([^)]*\)\s*$/, '')); }
+async function copasGOImportarWiki() {
+  const pagina = (document.getElementById('copas-wiki-pagina').value || '').trim() || 'Liga Combates GO';
+  copasGOEstado(`Leyendo «${pagina}» en WikiDex…`);
+  let titulos = [], origen = '';
+  try {
+    const j = await wikidexApi(`action=parse&prop=links&redirects=1&page=${encodeURIComponent(pagina)}`);
+    const links = (j.parse && j.parse.links) || [];
+    titulos = links.filter(l => l.ns === 0 && /^Copa\b/i.test(l['*'])).map(l => l['*']);
+    origen = `la página «${pagina}»`;
+    if (!titulos.length) {
+      copasGOEstado('Esa página no lista copas; buscando en todo WikiDex…');
+      const k = await wikidexApi(`action=query&list=search&srnamespace=0&srlimit=50&srsearch=${encodeURIComponent('Copa "Pokémon GO"')}`);
+      titulos = ((k.query && k.query.search) || []).map(r => r.title).filter(t => /^Copa\b/i.test(t));
+      origen = 'una búsqueda en WikiDex';
+    }
+  } catch (e) {
+    copasGOEstado(`No se pudo leer WikiDex (${e.message}). Puede ser la red o un bloqueo del navegador; mientras tanto puedes escribir las copas a mano.`);
+    return;
+  }
+  const vistos = new Set();
+  wikidexCandidatas = [];
+  titulos.forEach(t => {
+    const nombre = wikidexNombreDeTitulo(t);
+    if (!nombre || vistos.has(nombre.toLowerCase())) return;
+    vistos.add(nombre.toLowerCase());
+    wikidexCandidatas.push({ titulo: t, nombre });
+  });
+  const cont = document.getElementById('copas-wiki-previa');
+  if (!wikidexCandidatas.length) {
+    cont.innerHTML = '';
+    copasGOEstado(`No se encontraron copas en ${origen}. Prueba con otro título de página de WikiDex o escríbelas a mano.`);
+    return;
+  }
+  const yaEsta = n => LIGAS_BASE.includes(n) || copasGO.some(c => c.name.toLowerCase() === n.toLowerCase());
+  cont.innerHTML = `<div style="font-size:0.78rem;margin-bottom:4px">Encontradas ${wikidexCandidatas.length} en ${esc(origen)}. Desmarca las que no sean copas de Pokémon GO:</div>
+    <div style="max-height:26vh;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:6px">${wikidexCandidatas.map((c, i) => `
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;${yaEsta(c.nombre) ? 'opacity:0.5' : ''}">
+        <input type="checkbox" class="copa-wiki-cb" data-i="${i}" ${yaEsta(c.nombre) ? 'disabled' : 'checked'}> ${esc(c.nombre)}${yaEsta(c.nombre) ? ' (ya añadida)' : ''}
+      </label>`).join('')}</div>
+    <button type="button" class="btn btn-primary" onclick="copasGOAgregarWiki()">➕ Añadir las marcadas</button>`;
+  copasGOEstado('Revisa la lista y pulsa «Añadir las marcadas». Se usa la liga elegida en «Usa datos de».');
+}
+function copasGOAgregarWiki() {
+  const base = document.getElementById('copas-base-nueva').value;
+  let nuevas = 0;
+  document.querySelectorAll('.copa-wiki-cb:checked').forEach(cb => {
+    const c = wikidexCandidatas[Number(cb.dataset.i)];
+    if (!c || LIGAS_BASE.includes(c.nombre) || copasGO.some(x => x.name.toLowerCase() === c.nombre.toLowerCase())) return;
+    copasGO.push({ name: c.nombre, base, logo: '', wiki: c.titulo });
+    nuevas++;
+  });
+  document.getElementById('copas-wiki-previa').innerHTML = '';
+  copasGOGuardar();
+  copasGOEstado(nuevas ? `Se añadieron ${nuevas} copa(s). Buscando logos…` : 'No marcaste ninguna copa nueva.');
+  if (nuevas) copasGOBuscarFaltantes();
+}
+
 // ── Gestor de copas (modal en Datos → GO) ──
 function abrirCopasGO() { renderCopasGO(); document.getElementById('modal-copas-go').classList.add('open'); }
 function copasGOEstado(t) { const e = document.getElementById('copas-estado'); if (e) e.textContent = t || ''; }
@@ -8179,7 +8269,8 @@ async function copasGOBuscarUno(i, silencioso) {
   const c = copasGO[i];
   if (!c) return false;
   if (!silencioso) copasGOEstado(`Buscando «${c.name}» en WikiDex…`);
-  const url = await wikidexBuscarLogo(c.name);
+  let url = await wikidexBuscarLogo(c.name);
+  if (!url && c.wiki) url = await wikidexLogoDePagina(c.wiki);
   if (url) c.logo = url;
   if (!silencioso) {
     copasGOGuardar();
