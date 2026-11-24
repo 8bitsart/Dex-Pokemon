@@ -7776,11 +7776,19 @@ function ligaCheckboxesHTML(name, ligasSeleccionadas) {
     <summary class="liga-dd-sum" data-pokemon="${esc(name)}">${esc(ligaResumenTexto(sel))}</summary>
     <input type="search" class="liga-dd-filter" placeholder="Buscar copa…" oninput="ligaDdFiltrar(this)">
     <div class="liga-dd-body">${items}</div>
+    <div class="liga-dd-vacio" style="display:none;padding:6px 8px;font-size:0.75rem;color:var(--muted)">No hay ninguna liga o copa con ese nombre. Si es nueva, añádela en «🏆 Copas y logos».</div>
   </details>`;
 }
 function ligaDdFiltrar(inp) {
   const q = inp.value.trim().toLowerCase();
-  inp.parentNode.querySelectorAll('.liga-dd-item').forEach(l => { l.style.display = (!q || l.dataset.nombre.includes(q)) ? '' : 'none'; });
+  let visibles = 0;
+  inp.parentNode.querySelectorAll('.liga-dd-item').forEach(l => {
+    const ok = !q || l.dataset.nombre.includes(q);
+    l.style.display = ok ? '' : 'none';
+    if (ok) visibles++;
+  });
+  const vacio = inp.parentNode.querySelector('.liga-dd-vacio');
+  if (vacio) vacio.style.display = visibles ? 'none' : 'block';
 }
 function ligaIconsHTML(ligas) {
   const lista = Array.isArray(ligas) ? ligas : [];
