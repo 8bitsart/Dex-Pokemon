@@ -3297,6 +3297,21 @@
   .liga-icon svg { width: 100%; height: 100%; display: block; }
   .liga-icon-empty { width: 30px; height: 30px; display: inline-block; }
   .ri-value .liga-icon { width: 26px; height: 26px; vertical-align: middle; margin-right: 6px; }
+  .liga-icon-badge { width: 100%; height: 100%; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 800; line-height: 1; }
+  .liga-icon-mas { font-size: 0.7rem; color: var(--muted); align-self: center; margin-left: 2px; }
+  .liga-dd { font-size: 0.78rem; min-width: 150px; }
+  .liga-dd > summary { cursor: pointer; padding: 5px 8px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.05); list-style: none; white-space: nowrap; }
+  .liga-dd > summary::-webkit-details-marker { display: none; }
+  .liga-dd > summary::after { content: ' ▾'; }
+  .liga-dd[open] > summary::after { content: ' ▴'; }
+  .liga-dd-filter { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 4px 6px; font-size: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: inherit; }
+  .liga-dd-body { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; padding: 4px 2px; }
+  .liga-dd-item { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; white-space: nowrap; cursor: pointer; }
+  .iv-input { min-width: 70px; }
+  .copa-row { display: flex; align-items: center; gap: 8px; background: var(--dark-card); border-radius: 8px; padding: 6px 10px; }
+  .copa-row-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
+  .copa-row-main input, .copa-row select { font-size: 0.75rem; padding: 3px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: inherit; min-width: 0; }
+  .copa-row .btn { padding: 2px 8px; font-size: 0.8rem; }
 
   /* LOGIN DE ENTRADA */
   html.gate-locked body > *:not(#app-gate) { visibility: hidden !important; }
@@ -3925,6 +3940,9 @@
           <button class="btn btn-pixel-amarillo btn-liga-negro" id="go-liga-btn-Liga Ultra" onclick="selectGoConsultaLiga('Liga Ultra')">Liga Ultra</button>
           <button class="btn btn-pixel-amarillo btn-liga-negro" id="go-liga-btn-Liga Master" onclick="selectGoConsultaLiga('Liga Master')">Liga Master</button>
         </div>
+        <div id="go-copa-wrap" style="display:none;margin-top:10px">
+          <div id="go-copa-btns" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+        </div>
       </div>
 
       <!-- Lista de Pokémon de la liga elegida (solo GO) -->
@@ -4101,6 +4119,7 @@
       <div class="translate-moves-toolbar">
         <button class="btn btn-primary" onclick="goSugerirVacios()">🪄 Sugerir para los vacíos</button>
         <button class="btn" onclick="abrirOrdenarLigas()">↕️ Ordenar ligas</button>
+        <button class="btn" onclick="abrirCopasGO()">🏆 Copas y logos</button>
         <span id="go-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;margin-left:auto;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="go-en-reparacion-check" onchange="toggleModoEnReparacion('go', this.checked)">
@@ -4123,6 +4142,9 @@
               <th>Stats — Liga Super</th>
               <th>Stats — Liga Ultra</th>
               <th>Stats — Liga Master</th>
+              <th>IV % — Liga Super</th>
+              <th>IV % — Liga Ultra</th>
+              <th>IV % — Liga Master</th>
               <th>Mov. Rápido</th>
               <th>Mov. Cargado</th>
               <th>Mov. Cargado 2</th>
@@ -4527,10 +4549,35 @@
     <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">
       Define el orden en que aparecen en la lista pública de cada liga. Los que todavía no ordenaste a mano quedan al final, por orden alfabético.
     </p>
-    <div class="modal-btns" id="ordenar-liga-tabs" style="margin-bottom:12px"></div>
+    <div class="modal-btns" id="ordenar-liga-tabs" style="margin-bottom:12px;flex-wrap:wrap;max-height:28vh;overflow-y:auto"></div>
     <div id="ordenar-liga-list" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
     <div class="modal-btns" style="margin-top:14px">
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-ordenar-ligas')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COPAS TEMÁTICAS DE POKÉMON GO -->
+<div class="modal-overlay" id="modal-copas-go">
+  <div class="modal" style="max-width:640px">
+    <h3>🏆 COPAS Y LOGOS (GO)</h3>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">
+      Escribe una copa por línea (opcional: <b>Nombre | URL del logo</b>). Los logos se buscan solos en WikiDex; si alguno no aparece, pega la URL de la imagen en su fila.
+      «Usa datos de» indica de qué liga (Super/Ultra/Master) toma Nivel, CP, Stats e IV al consultarla.
+    </p>
+    <textarea id="copas-nuevas" rows="4" placeholder="Copa Retro&#10;Copa Fantasía&#10;Copa Verano | https://…/logo.png" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:inherit;font:inherit"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      <label style="font-size:0.8rem">Usa datos de:</label>
+      <select id="copas-base-nueva" style="padding:6px;border-radius:6px;background:rgba(0,0,0,0.3);color:inherit;border:1px solid rgba(255,255,255,0.2)">
+        <option value="Liga Super">Super (CP 1500)</option><option value="Liga Ultra">Ultra (CP 2500)</option><option value="Liga Master">Master</option>
+      </select>
+      <button type="button" class="btn btn-primary" onclick="copasGOAgregar()">➕ Añadir</button>
+      <button type="button" class="btn" onclick="copasGOBuscarFaltantes()">🔎 Buscar logos faltantes</button>
+    </div>
+    <div id="copas-estado" style="font-size:0.78rem;color:var(--muted);margin:8px 0;min-height:1em"></div>
+    <div id="copas-lista" style="max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-copas-go')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -5547,10 +5594,11 @@ let currentGoConsultaLiga = null;
 function selectGoConsultaLiga(liga) {
   goLigaRestaurarTarjeta(); // la tarjeta puede estar dentro de la lista, que se vuelve a dibujar
   currentGoConsultaLiga = liga;
-  LIGA_LIST.forEach(l => {
+  LIGAS_BASE.forEach(l => {
     const btn = document.getElementById('go-liga-btn-' + l);
     if (btn) btn.classList.toggle('btn-primary', l === liga);
   });
+  document.querySelectorAll('.go-copa-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.liga === liga));
 
   loadNamesFromStorage();
   const enLiga = (POKEMON_LISTS.go || []).filter(p => (getGOData(p).ligas || []).includes(liga));
@@ -5710,7 +5758,8 @@ function selectMode(mode) {
     normalSearch.style.display = 'none';
     tcgMazosSection.style.display = 'none';
     resultCard.style.display = 'block';
-    LIGA_LIST.forEach(l => {
+    goCopaSelectRender();
+    LIGAS_BASE.forEach(l => {
       const btn = document.getElementById('go-liga-btn-' + l);
       if (btn) {
         btn.innerHTML = `${ligaIconHTML(l, 42)}<span>${l}</span>`;   // las insignias tienen detalle: se muestran grandes
@@ -7265,21 +7314,30 @@ async function showResult(name) {
     const cpPorLiga = { 'Liga Super': d.cpSuper, 'Liga Ultra': d.cpUltra, 'Liga Master': d.cpMax };
     // Nivel por liga (2 cifras, a veces con decimal: 24.5, 40, 50...). Va encima del CP.
     const nivelPorLiga = { 'Liga Super': d.nivelSuper, 'Liga Ultra': d.nivelUltra, 'Liga Master': d.nivelMaster };
+    // IV (porcentaje, ej: 98.04 o 100) por liga. Las copas temáticas usan los datos de su liga base (Super/Ultra/Master).
+    const ivPorLiga = { 'Liga Super': d.ivSuper, 'Liga Ultra': d.ivUltra, 'Liga Master': d.ivMaster };
     const filaNivel = liga => `<div class="result-item">
           <div class="ri-label">Nivel — ${esc(liga)}</div>
-          <div class="ri-value ${isEmpty(nivelPorLiga[liga])?'empty':''}">${val(nivelPorLiga[liga],'Sin datos')}</div>
+          <div class="ri-value ${isEmpty(nivelPorLiga[ligaBase(liga)])?'empty':''}">${val(nivelPorLiga[ligaBase(liga)],'Sin datos')}</div>
         </div>`;
     const filaCP = liga => `<div class="result-item">
           <div class="ri-label">CP — ${esc(liga)}</div>
-          <div class="ri-value ${isEmpty(cpPorLiga[liga])?'empty':''}">${val(cpPorLiga[liga],'Sin datos')}</div>
+          <div class="ri-value ${isEmpty(cpPorLiga[ligaBase(liga)])?'empty':''}">${val(cpPorLiga[ligaBase(liga)],'Sin datos')}</div>
         </div>`;
     const filaStats = liga => `<div class="result-item">
           <div class="ri-label">Stats — ${esc(liga)}</div>
-          <div class="ri-value ${isEmpty(statsPorLiga[liga])?'empty':''}">${val(statsPorLiga[liga],'Sin datos')}</div>
+          <div class="ri-value ${isEmpty(statsPorLiga[ligaBase(liga)])?'empty':''}">${val(statsPorLiga[ligaBase(liga)],'Sin datos')}</div>
         </div>`;
+    const filaIV = liga => {
+      const iv = String(ivPorLiga[ligaBase(liga)] || '').replace(/[^0-9.]/g, '');
+      return `<div class="result-item">
+          <div class="ri-label">IV — ${esc(liga)}</div>
+          <div class="ri-value ${iv ? '' : 'empty'}">${iv ? iv + '%' : 'Sin datos'}</div>
+        </div>`;
+    };
     const statsItemsHTML = currentGoConsultaLiga
-      ? filaNivel(currentGoConsultaLiga) + filaCP(currentGoConsultaLiga) + filaStats(currentGoConsultaLiga)
-      : LIGA_LIST.map(l => filaNivel(l) + filaCP(l) + filaStats(l)).join('');
+      ? filaNivel(currentGoConsultaLiga) + filaCP(currentGoConsultaLiga) + filaStats(currentGoConsultaLiga) + filaIV(currentGoConsultaLiga)
+      : LIGAS_BASE.map(l => filaNivel(l) + filaCP(l) + filaStats(l) + filaIV(l)).join('');
     // Movimiento de GO. Si es Legacy se pinta de naranja y debajo lleva un
     // desplegable con su alternativa.
     const filaMov = (label, mov, tipo, legacy, alt, altTipo) => {
@@ -7642,7 +7700,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', habilidad:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ legacyRapido:'', altRapido:'', altTipoRapido:'', legacyCargado:'', altCargado:'', altTipoCargado:'', legacyCargado2:'', altCargado2:'', altTipoCargado2:'', nivelSuper:'', nivelUltra:'', nivelMaster:'', cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
+const EMPTY_GO         = () => ({ legacyRapido:'', altRapido:'', altTipoRapido:'', legacyCargado:'', altCargado:'', altTipoCargado:'', legacyCargado2:'', altCargado2:'', altTipoCargado2:'', nivelSuper:'', nivelUltra:'', nivelMaster:'', ivSuper:'', ivUltra:'', ivMaster:'', cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -7681,7 +7739,8 @@ function typeIconHTML(t) {
 }
 
 // ── LIGAS DE POKÉMON GO (Super / Ultra / Master) ────────────────────────────
-const LIGA_LIST = ['Liga Super', 'Liga Ultra', 'Liga Master'];
+const LIGAS_BASE = ['Liga Super', 'Liga Ultra', 'Liga Master'];
+let LIGA_LIST = LIGAS_BASE.slice();   // ligas base + copas temáticas (ver copasGO)
 const LIGA_COLORS = { 'Liga Super': '#2f6fed', 'Liga Ultra': '#232323', 'Liga Master': '#7b2fbe' };
 const LIGA_ACCENTS = { 'Liga Super': '#e63946', 'Liga Ultra': '#f5c518', 'Liga Master': '#ff5fb0' };
 // Dado un array de nombres ya filtrados por pertenecer a una liga, devuelve
@@ -7700,18 +7759,34 @@ function ordenarNombresPorLiga(nombres, liga, ordenGuardado) {
     .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   return [...ordenados, ...restantes];
 }
+function ligaResumenTexto(sel) {
+  const l = Array.isArray(sel) ? sel : [];
+  if (!l.length) return 'Elegir ligas…';
+  return l.length <= 2 ? l.join(', ') : l.length + ' ligas';
+}
+// Desplegable con casillas: se pueden marcar una o varias ligas/copas.
 function ligaCheckboxesHTML(name, ligasSeleccionadas) {
-  const seleccionadas = Array.isArray(ligasSeleccionadas) ? ligasSeleccionadas : [];
-  return LIGA_LIST.map(l => `
-    <label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;white-space:nowrap">
-      <input type="checkbox" class="liga-checkbox" data-pokemon="${esc(name)}" data-liga="${l}" ${seleccionadas.includes(l) ? 'checked' : ''}>
-      ${ligaIconHTML(l, 16)}${l.replace('Liga ', '')}
+  const sel = Array.isArray(ligasSeleccionadas) ? ligasSeleccionadas : [];
+  const items = LIGA_LIST.map(l => `
+    <label class="liga-dd-item" data-nombre="${esc(l).toLowerCase()}">
+      <input type="checkbox" class="liga-checkbox" data-pokemon="${esc(name)}" data-liga="${esc(l)}" ${sel.includes(l) ? 'checked' : ''}>
+      ${ligaIconHTML(l, 16)}<span>${esc(l)}</span>
     </label>`).join('');
+  return `<details class="liga-dd">
+    <summary class="liga-dd-sum" data-pokemon="${esc(name)}">${esc(ligaResumenTexto(sel))}</summary>
+    <input type="search" class="liga-dd-filter" placeholder="Buscar copa…" oninput="ligaDdFiltrar(this)">
+    <div class="liga-dd-body">${items}</div>
+  </details>`;
+}
+function ligaDdFiltrar(inp) {
+  const q = inp.value.trim().toLowerCase();
+  inp.parentNode.querySelectorAll('.liga-dd-item').forEach(l => { l.style.display = (!q || l.dataset.nombre.includes(q)) ? '' : 'none'; });
 }
 function ligaIconsHTML(ligas) {
   const lista = Array.isArray(ligas) ? ligas : [];
   if (!lista.length) return '<span class="liga-icon liga-icon-empty"></span>';
-  return lista.map(l => ligaIconHTML(l)).join('');
+  const MAX = 6;
+  return lista.slice(0, MAX).map(l => ligaIconHTML(l)).join('') + (lista.length > MAX ? `<span class="liga-icon-mas">+${lista.length - MAX}</span>` : '');
 }
 // Insignias de las ligas de GO (imágenes propias con el fondo transparente). Antes eran un dibujo SVG hecho por código.
 const LIGA_IMG_B64 = {
@@ -7733,7 +7808,8 @@ function ligaImgUrl(liga) {
 }
 // tamano: lado del ícono en px (por defecto 30, el tamaño "grande" de siempre).
 function ligaIconHTML(liga, tamano) {
-  if (!liga || !LIGA_COLORS[liga] || !LIGA_IMG_B64[liga]) return '<span class="liga-icon liga-icon-empty"></span>';
+  if (!liga) return '<span class="liga-icon liga-icon-empty"></span>';
+  if (!LIGA_COLORS[liga] || !LIGA_IMG_B64[liga]) return copaIconHTML(liga, tamano);   // copa temática: logo desde WikiDex
   const px = tamano || 30;
   return `<span class="liga-icon" style="width:${px}px;height:${px}px" title="${liga}"><img src="${ligaImgUrl(liga)}" alt="${liga}" style="width:100%;height:100%;object-fit:contain;display:block"></span>`;
 }
@@ -7848,7 +7924,7 @@ function pokemonVacioChampions(nombre) {
 
 function pokemonVacioGo(nombre) {
   const d = dataGO[nombre] || EMPTY_GO();
-  return !d.nivelSuper && !d.nivelUltra && !d.nivelMaster && !d.cpMax && !d.cpSuper && !d.cpUltra && !d.statsSuper && !d.statsUltra && !d.statsMaster &&
+  return !d.nivelSuper && !d.nivelUltra && !d.nivelMaster && !d.cpMax && !d.cpSuper && !d.cpUltra && !d.statsSuper && !d.statsUltra && !d.statsMaster && !d.ivSuper && !d.ivUltra && !d.ivMaster &&
     !d.movRapido && !d.movCargado && !d.movCargado2 && (!d.ligas || d.ligas.length === 0);
 }
 
@@ -7936,6 +8012,185 @@ let ligaOrder = { 'Liga Super': [], 'Liga Ultra': [], 'Liga Master': [] };
 try {
   Object.assign(ligaOrder, JSON.parse(localStorage.getItem('pokemonLigaOrderGO') || '{}'));
 } catch (e) {}
+
+// ── COPAS TEMÁTICAS DE POKÉMON GO ───────────────────────────────────────────
+// Lista editable de copas: { name, base, logo }. «base» es la liga (Super/Ultra/Master)
+// de la que toma Nivel/CP/Stats/IV al consultarla; «logo» es la URL de la imagen, que se
+// busca en WikiDex y se guarda (así Consulta no tiene que buscarla cada vez).
+let copasGO = [];
+try {
+  const c = JSON.parse(localStorage.getItem('copasGO') || '[]');
+  if (Array.isArray(c)) copasGO = c.filter(x => x && x.name);
+} catch (e) {}
+function nombreCopaLimpio(s) { return String(s || '').replace(/[<>"'`\\|]/g, '').replace(/\s+/g, ' ').trim(); }
+function rebuildLigaList() {
+  const nombres = copasGO.map(c => c.name).filter(n => n && !LIGAS_BASE.includes(n));
+  LIGA_LIST = [...LIGAS_BASE, ...new Set(nombres)];
+}
+rebuildLigaList();
+function copaPorNombre(n) { return copasGO.find(c => c.name === n) || null; }
+function ligaBase(liga) {
+  if (LIGAS_BASE.includes(liga)) return liga;
+  const c = copaPorNombre(liga);
+  return (c && LIGAS_BASE.includes(c.base)) ? c.base : 'Liga Super';
+}
+function copaColor(name) {
+  let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return `hsl(${h} 55% 38%)`;
+}
+function copaIniciales(name) {
+  const p = String(name).split(/\s+/).filter(w => w && !/^(copa|cup|liga)$/i.test(w));
+  return ((p.length ? p : [String(name)]).map(w => w[0]).join('').slice(0, 2) || '?').toUpperCase();
+}
+// Logo de la copa (imagen guardada); si no hay o no carga, un círculo de color con iniciales.
+function copaIconHTML(liga, tamano) {
+  const c = copaPorNombre(liga);
+  if (!c) return '<span class="liga-icon liga-icon-empty"></span>';
+  const px = tamano || 30;
+  const badge = `<span class="liga-icon-badge" style="background:${copaColor(c.name)};font-size:${Math.max(8, Math.round(px * 0.36))}px;display:${c.logo ? 'none' : 'flex'}">${esc(copaIniciales(c.name))}</span>`;
+  const img = c.logo
+    ? `<img src="${esc(c.logo)}" alt="${esc(c.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:contain;display:block">`
+    : '';
+  return `<span class="liga-icon" style="width:${px}px;height:${px}px" title="${esc(c.name)}">${img}${badge}</span>`;
+}
+// IV en porcentaje a partir de «15/14/14» → 95.56 (45/45 → 100).
+function ivDesdeStats(stats) {
+  const m = String(stats || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return '';
+  const pct = (Number(m[1]) + Number(m[2]) + Number(m[3])) / 45 * 100;
+  return String(Math.round(pct * 100) / 100);
+}
+// IV: 2 cifras con hasta 2 decimales (98.04) o 100. Acepta coma o punto.
+function formatearIV(raw) {
+  const v = String(raw).replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  const punto = v.indexOf('.');
+  let ent = punto === -1 ? v : v.slice(0, punto);
+  const dec = punto === -1 ? null : v.slice(punto + 1).replace(/\./g, '').slice(0, 2);
+  if (ent.length >= 3) { ent = ent.slice(0, 3); if (ent === '100') return '100'; }
+  ent = ent.slice(0, 2);
+  return dec === null ? ent : ent + '.' + dec;
+}
+
+// Botones de copas en Consulta, con el logo grande igual que las 3 ligas (solo las que ya tienen algún Pokémon).
+function goCopaSelectRender() {
+  const wrap = document.getElementById('go-copa-wrap'), cont = document.getElementById('go-copa-btns');
+  if (!wrap || !cont) return;
+  const datos = readStorageObj('pokemonDataGO') || {};
+  const cuentas = {};
+  Object.values(datos).forEach(d => ((d && d.ligas) || []).forEach(l => { cuentas[l] = (cuentas[l] || 0) + 1; }));
+  const copas = copasGO.filter(c => cuentas[c.name]);
+  cont.innerHTML = copas.map(c => `<button class="btn btn-pixel-amarillo btn-liga-negro go-copa-btn${c.name === currentGoConsultaLiga ? ' btn-primary' : ''}" data-liga="${esc(c.name)}" onclick="selectGoConsultaLiga(this.dataset.liga)" style="display:inline-flex;align-items:center;gap:8px">${ligaIconHTML(c.name, 42)}<span>${esc(c.name)}</span></button>`).join('');
+  wrap.style.display = copas.length ? 'block' : 'none';
+}
+
+// ── Logos desde WikiDex (API de MediaWiki, archivos del espacio «Archivo:») ──
+const WIKIDEX_APIS = ['https://www.wikidex.net/api.php', 'https://www.wikidex.net/wiki/api.php'];
+let wikidexApiOk = null, wikidexUltimoError = '';
+async function wikidexBuscarLogo(nombre) {
+  const core = pvNorm(String(nombre).replace(/\b(copa|cup|liga)\b/gi, ''));
+  const consultas = [nombre + ' GO', nombre];
+  for (const api of (wikidexApiOk ? [wikidexApiOk] : WIKIDEX_APIS)) {
+    for (const q of consultas) {
+      const url = `${api}?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url&iiurlwidth=128&format=json&origin=*`;
+      let j;
+      try { j = await pvpokeFetchJson(url, 15000); wikidexApiOk = api; }
+      catch (e) { wikidexUltimoError = e.name === 'AbortError' ? 'sin respuesta' : e.message; continue; }
+      const pages = (j && j.query && j.query.pages) ? Object.values(j.query.pages) : [];
+      let mejor = null, mejorPts = -99;
+      pages.forEach(p => {
+        const ii = p.imageinfo && p.imageinfo[0];
+        if (!ii) return;
+        const t = String(p.title || '');
+        if (core && !pvNorm(t).includes(core)) return;   // el archivo tiene que nombrar a la copa
+        let pts = 0;
+        if (/\bGO\b/i.test(t)) pts += 2;
+        if (/\.(png|svg|webp)$/i.test(t)) pts += 1;
+        if (/logo|icono|insignia|copa|cup/i.test(t)) pts += 1;
+        if (/sprite|captura|screenshot|banner|mini/i.test(t)) pts -= 2;
+        pts -= (p.index || 0) * 0.01;
+        if (pts > mejorPts) { mejorPts = pts; mejor = ii; }
+      });
+      if (mejor) return mejor.thumburl || mejor.url;
+    }
+  }
+  return null;
+}
+
+// ── Gestor de copas (modal en Datos → GO) ──
+function abrirCopasGO() { renderCopasGO(); document.getElementById('modal-copas-go').classList.add('open'); }
+function copasGOEstado(t) { const e = document.getElementById('copas-estado'); if (e) e.textContent = t || ''; }
+function renderCopasGO() {
+  const el = document.getElementById('copas-lista');
+  if (!el) return;
+  const opcionesBase = b => LIGAS_BASE.map(l => `<option value="${l}" ${l === b ? 'selected' : ''}>${l.replace('Liga ', '')}</option>`).join('');
+  el.innerHTML = copasGO.length ? copasGO.map((c, i) => `
+    <div class="copa-row">
+      ${copaIconHTML(c.name, 34)}
+      <div class="copa-row-main">
+        <b>${esc(c.name)}</b>
+        <input type="url" placeholder="URL del logo (se busca sola en WikiDex)" value="${esc(c.logo || '')}" onchange="copasGOSetLogo(${i}, this.value)">
+      </div>
+      <select title="Usa los datos de esta liga" onchange="copasGOSetBase(${i}, this.value)">${opcionesBase(c.base)}</select>
+      <button type="button" class="btn" title="Buscar logo en WikiDex" onclick="copasGOBuscarUno(${i})">🔎</button>
+      <button type="button" class="btn" title="Quitar copa" onclick="copasGOQuitar(${i})">🗑</button>
+    </div>`).join('') : '<div class="result-empty">Todavía no agregaste copas.</div>';
+}
+function copasGOGuardar() {
+  rebuildLigaList();
+  if (typeof persistAll === 'function') persistAll();
+  renderTableGO();
+  renderCopasGO();
+}
+function copasGOAgregar() {
+  const ta = document.getElementById('copas-nuevas');
+  const base = document.getElementById('copas-base-nueva').value;
+  let nuevas = 0;
+  ta.value.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+    const [n, url] = l.split('|').map(x => x.trim());
+    const nombre = nombreCopaLimpio(n);
+    if (!nombre || LIGAS_BASE.includes(nombre) || copasGO.some(c => c.name.toLowerCase() === nombre.toLowerCase())) return;
+    copasGO.push({ name: nombre, base, logo: /^https?:\/\//i.test(url || '') ? url : '' });
+    nuevas++;
+  });
+  ta.value = '';
+  copasGOGuardar();
+  copasGOEstado(nuevas ? `Se añadieron ${nuevas} copa(s).` : 'No hay copas nuevas para añadir (nombres vacíos o repetidos).');
+  if (nuevas) copasGOBuscarFaltantes();
+}
+function copasGOSetLogo(i, url) { if (!copasGO[i]) return; copasGO[i].logo = /^https?:\/\//i.test(url.trim()) ? url.trim() : ''; copasGOGuardar(); }
+function copasGOSetBase(i, base) { if (!copasGO[i] || !LIGAS_BASE.includes(base)) return; copasGO[i].base = base; copasGOGuardar(); }
+function copasGOQuitar(i) {
+  const c = copasGO[i];
+  if (!c || !confirm(`¿Quitar «${c.name}»? También se desmarca de los Pokémon que la tengan.`)) return;
+  Object.keys(dataGO).forEach(n => { if (dataGO[n] && Array.isArray(dataGO[n].ligas)) dataGO[n].ligas = dataGO[n].ligas.filter(l => l !== c.name); });
+  delete ligaOrder[c.name];
+  copasGO.splice(i, 1);
+  copasGOGuardar();
+}
+async function copasGOBuscarUno(i, silencioso) {
+  const c = copasGO[i];
+  if (!c) return false;
+  if (!silencioso) copasGOEstado(`Buscando «${c.name}» en WikiDex…`);
+  const url = await wikidexBuscarLogo(c.name);
+  if (url) c.logo = url;
+  if (!silencioso) {
+    copasGOGuardar();
+    copasGOEstado(url ? `Logo de «${c.name}» encontrado.` : `No se encontró el logo de «${c.name}»${wikidexUltimoError ? ' (' + wikidexUltimoError + ')' : ''}. Pegá la URL de la imagen a mano.`);
+  }
+  return !!url;
+}
+async function copasGOBuscarFaltantes() {
+  const pend = copasGO.map((c, i) => i).filter(i => !copasGO[i].logo);
+  if (!pend.length) { copasGOEstado('Todas las copas ya tienen logo.'); return; }
+  wikidexUltimoError = '';
+  let ok = 0;
+  for (let k = 0; k < pend.length; k++) {
+    copasGOEstado(`Buscando logos en WikiDex… ${k + 1}/${pend.length}`);
+    if (await copasGOBuscarUno(pend[k], true)) ok++;
+  }
+  copasGOGuardar();
+  copasGOEstado(`Logos encontrados: ${ok} de ${pend.length}.` + (ok < pend.length ? ' Para el resto pegá la URL de la imagen en su fila' + (wikidexUltimoError ? ` (error de red: ${wikidexUltimoError})` : '') + '.' : ''));
+}
 
 POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); dataChampionsDoubles[p] = EMPTY_CHAMPIONS(); });
 POKEMON_LISTS.tcg.forEach(p => { dataTCG[p] = EMPTY_TCG(); });
@@ -8942,6 +9197,7 @@ function goComputeSuggestion({ types, movepool, stats }) {
     if (super_) { resultado.statsSuper = `${super_.ivAtk}/${super_.ivDef}/${super_.ivSta}`; resultado.cpSuper = String(super_.cp); resultado.nivelSuper = String(super_.nivel); }
     if (ultra) { resultado.statsUltra = `${ultra.ivAtk}/${ultra.ivDef}/${ultra.ivSta}`; resultado.cpUltra = String(ultra.cp); resultado.nivelUltra = String(ultra.nivel); }
     if (master) { resultado.statsMaster = `${master.ivAtk}/${master.ivDef}/${master.ivSta}`; resultado.cpMax = String(master.cp); resultado.nivelMaster = String(master.nivel); }
+    ['Super', 'Ultra', 'Master'].forEach(sfx => { if (resultado['stats' + sfx]) resultado['iv' + sfx] = ivDesdeStats(resultado['stats' + sfx]); });
   }
   return resultado;
 }
@@ -9088,6 +9344,7 @@ async function goSugerirDesdePvpoke(name) {
     }
     resultado['nivel' + l.suf] = String(nivel);
     resultado['stats' + l.suf] = `${iv[0]}/${iv[1]}/${iv[2]}`;
+    resultado['iv' + l.suf] = ivDesdeStats(resultado['stats' + l.suf]);
     resultado[l.cpCampo] = String(cp);
   });
 
@@ -10205,6 +10462,7 @@ function persistLocalOnly() {
   localStorage.setItem('gifEscalas', JSON.stringify(GIF_ESCALAS));
   localStorage.setItem('nombresExpansiones', JSON.stringify(NOMBRES_EXPANSIONES));
   localStorage.setItem('pokemonLigaOrderGO', JSON.stringify(ligaOrder));
+  localStorage.setItem('copasGO', JSON.stringify(copasGO));
 }
 
 // Aplica un snapshot recibido de Firestore al estado en memoria (no persiste
@@ -10258,6 +10516,8 @@ function applyGameDoc(game, doc) {
     if (data) dataGO = data;
     const ordenGo = parseSnapField(doc.ligaOrder);
     if (ordenGo && typeof ordenGo === 'object') ligaOrder = ordenGo;
+    const copasSnap = parseSnapField(doc.copas);
+    if (Array.isArray(copasSnap)) { copasGO = copasSnap.filter(x => x && x.name); rebuildLigaList(); }
   } else if (game === 'tcg') {
     if (Array.isArray(list)) POKEMON_LISTS.tcg = list;
     if (data) dataTCG = data;
@@ -10338,7 +10598,7 @@ function payloadsFirestore() {
   // índice" que genera un mapa con una clave por cada Pokémon.
   return {
     champions: { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), championsDoubles: JSON.stringify(dataChampionsDoubles), enReparacion: !!modosEnReparacion.champions },
-    go: { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder) },
+    go: { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder), copas: JSON.stringify(copasGO) },
     tcg: { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg },
     mazos: { mazos: JSON.stringify(dataMazos) },
     expansiones: { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) },
@@ -10725,6 +10985,9 @@ function renderTableGO() {
       <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsSuper" value="${esc(d.statsSuper)}" placeholder="Ej: 15/14/14"></td>
       <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsUltra" value="${esc(d.statsUltra)}" placeholder="Ej: 13/13/13"></td>
       <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsMaster" value="${esc(d.statsMaster)}" placeholder="Ej: 15/15/15"></td>
+      <td><input class="editable-cell iv-input" data-pokemon="${esc(name)}" data-field="ivSuper" value="${esc(d.ivSuper)}" placeholder="Ej: 98.04" inputmode="decimal" maxlength="6" autocomplete="off"></td>
+      <td><input class="editable-cell iv-input" data-pokemon="${esc(name)}" data-field="ivUltra" value="${esc(d.ivUltra)}" placeholder="Ej: 97.78" inputmode="decimal" maxlength="6" autocomplete="off"></td>
+      <td><input class="editable-cell iv-input" data-pokemon="${esc(name)}" data-field="ivMaster" value="${esc(d.ivMaster)}" placeholder="Ej: 100" inputmode="decimal" maxlength="6" autocomplete="off"></td>
       <td>
         <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movRapido" data-game="go" value="${esc(d.movRapido)}" placeholder="Ej: Roca Afilada">
         <div class="move-type-row">
@@ -10783,7 +11046,7 @@ function renderTableGO() {
     </tr>`;
   }).join('');
 
-  tbody.querySelectorAll('.editable-cell:not(.name-cell):not(.stat-slash-input):not(.nivel-input)').forEach(input => {
+  tbody.querySelectorAll('.editable-cell:not(.name-cell):not(.stat-slash-input):not(.nivel-input):not(.iv-input)').forEach(input => {
     input.addEventListener('input', () => {
       const p = input.dataset.pokemon, f = input.dataset.field;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
@@ -10831,6 +11094,17 @@ function renderTableGO() {
       autoguardarDatos('go');
     });
   });
+  // IV (%): 2 cifras con hasta 2 decimales (98.04) o 100.
+  tbody.querySelectorAll('.iv-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const formatted = formatearIV(input.value);
+      input.value = formatted;
+      const p = input.dataset.pokemon, f = input.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = formatted;
+      autoguardarDatos('go');
+    });
+  });
   tbody.querySelectorAll('.move-type-select').forEach(select => {
     select.addEventListener('change', () => {
       const p = select.dataset.pokemon, f = select.dataset.field;
@@ -10851,6 +11125,9 @@ function renderTableGO() {
       else if (!checkbox.checked && idx !== -1) ligas.splice(idx, 1);
       const wrap = document.querySelector(`.liga-icon-wrap[data-pokemon="${CSS.escape(p)}"]`);
       if (wrap) wrap.innerHTML = ligaIconsHTML(ligas);
+      const sum = document.querySelector(`.liga-dd-sum[data-pokemon="${CSS.escape(p)}"]`);
+      if (sum) sum.textContent = ligaResumenTexto(ligas);
+      autoguardarDatos('go');
     });
   });
   bindNameCellEvents(tbody);
@@ -13281,7 +13558,8 @@ function exportData() {
     champions: dataChampions, championsDoubles: dataChampionsDoubles, go: dataGO, tcg: dataTCG,
     mazos: dataMazos,
     expansiones: EXPANSIONES_SUGERIDAS.tcg,
-    ligaOrderGO: ligaOrder
+    ligaOrderGO: ligaOrder,
+    copasGO: copasGO
   };
   document.getElementById('export-text').value = JSON.stringify(exportObj, null, 2);
   document.getElementById('modal-export').classList.add('open');
@@ -13351,6 +13629,15 @@ function applyImportedData(parsed) {
     }
     if (parsed.ligaOrderGO && typeof parsed.ligaOrderGO === 'object') {
       Object.keys(parsed.ligaOrderGO).forEach(l => { if (Array.isArray(parsed.ligaOrderGO[l])) ligaOrder[l] = parsed.ligaOrderGO[l]; });
+    }
+    if (Array.isArray(parsed.copasGO)) {
+      parsed.copasGO.forEach(c => {
+        const nombre = nombreCopaLimpio(c && c.name);
+        if (nombre && !LIGAS_BASE.includes(nombre) && !copaPorNombre(nombre)) {
+          copasGO.push({ name: nombre, base: LIGAS_BASE.includes(c.base) ? c.base : 'Liga Super', logo: /^https?:\/\//i.test(c.logo || '') ? c.logo : '' });
+        }
+      });
+      rebuildLigaList();
     }
   } else if (parsed.data) {
     // Formato viejo (solo Champions)
