@@ -4570,6 +4570,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="copas-wiki-pagina" type="text" value="Liga Combates GO" title="Título de la página de WikiDex que lista las copas" style="flex:1 1 200px;min-width:0;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:inherit;font:inherit">
         <button type="button" class="btn btn-primary" onclick="copasGOImportarWiki()">📥 Importar copas</button>
+        <button type="button" class="btn" onclick="wikidexDiagnostico()" title="Comprueba si este navegador puede hablar con WikiDex">🩺 Probar conexión</button>
       </div>
       <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">Si esa página no existe o no lista copas, se buscan en todo WikiDex. Antes de añadir verás la lista para desmarcar lo que no sirva.</div>
       <div id="copas-wiki-previa" style="margin-top:8px"></div>
@@ -4583,7 +4584,7 @@
       <button type="button" class="btn btn-primary" onclick="copasGOAgregar()">➕ Añadir</button>
       <button type="button" class="btn" onclick="copasGOBuscarFaltantes()">🔎 Buscar logos faltantes</button>
     </div>
-    <div id="copas-estado" style="font-size:0.78rem;color:var(--muted);margin:8px 0;min-height:1em"></div>
+    <div id="copas-estado" style="font-size:0.78rem;color:var(--muted);margin:8px 0;min-height:1em;white-space:pre-line"></div>
     <div id="copas-lista" style="max-height:42vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
     <div class="modal-btns" style="margin-top:14px">
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-copas-go')">Cerrar</button>
@@ -8155,6 +8156,30 @@ async function wikidexLogoDePagina(titulo) {
     return t ? t.thumbnail.source : null;
   } catch (e) { return null; }
 }
+// Prueba de conexión: dice si WikiDex es alcanzable, si la API responde y qué error da.
+async function wikidexDiagnostico() {
+  copasGOEstado('Probando conexión con WikiDex…');
+  const out = [];
+  for (const api of WIKIDEX_APIS) {
+    const url = `${api}?action=query&meta=siteinfo&format=json&origin=*`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal, cache: 'no-cache' });
+      let det = 'HTTP ' + r.status;
+      if (r.ok) {
+        try { const j = await r.json(); det += (j && j.query) ? ' · la API responde bien' : ' · respuesta inesperada'; }
+        catch (e) { det += ' · no devolvió datos de API (esa ruta probablemente no es la correcta)'; }
+      }
+      out.push(`• ${api}\n   → ${det}`);
+    } catch (e) {
+      out.push(`• ${api}\n   → ${e.name === 'AbortError' ? 'sin respuesta en 15 s' : 'el navegador no pudo leerla (' + e.message + ')'}`);
+    } finally { clearTimeout(t); }
+  }
+  try { await fetch('https://www.wikidex.net/', { mode: 'no-cors' }); out.push('• Sitio wikidex.net: se puede alcanzar desde este navegador'); }
+  catch (e) { out.push('• Sitio wikidex.net: NO se puede alcanzar (red o bloqueo del navegador/empresa)'); }
+  copasGOEstado(out.join('\n'));
+}
 let wikidexCandidatas = [];
 function wikidexNombreDeTitulo(t) { return nombreCopaLimpio(String(t).replace(/\s*\([^)]*\)\s*$/, '')); }
 async function copasGOImportarWiki() {
@@ -8268,9 +8293,9 @@ function copasGOQuitar(i) {
 async function copasGOBuscarUno(i, silencioso) {
   const c = copasGO[i];
   if (!c) return false;
-  if (!silencioso) copasGOEstado(`Buscando «${c.name}» en WikiDex…`);
+  if (!silencioso) { wikidexUltimoError = ''; copasGOEstado(`Buscando «${c.name}» en WikiDex…`); }
   let url = await wikidexBuscarLogo(c.name);
-  if (!url && c.wiki) url = await wikidexLogoDePagina(c.wiki);
+  if (!url) url = await wikidexLogoDePagina([c.wiki, c.name, c.name + ' (Pokémon GO)', c.name + ' (GO)'].filter(Boolean).join('|'));
   if (url) c.logo = url;
   if (!silencioso) {
     copasGOGuardar();
