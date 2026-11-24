@@ -8104,12 +8104,17 @@ function goCopaSelectRender() {
 // ── Logos desde WikiDex (API de MediaWiki, archivos del espacio «Archivo:») ──
 const WIKIDEX_APIS = ['https://www.wikidex.net/api.php', 'https://www.wikidex.net/wiki/api.php'];
 let wikidexApiOk = null, wikidexUltimoError = '';
+// Normaliza para comparar nombres: sin tildes, sin mayúsculas, sin espacios ni símbolos.
+function wikidexNorm(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+let wikidexUltimoDetalle = '';
 async function wikidexBuscarLogo(nombre) {
-  const core = pvNorm(String(nombre).replace(/\b(copa|cup|liga)\b/gi, ''));
-  const consultas = [nombre + ' GO', nombre];
+  const core = wikidexNorm(String(nombre).replace(/\b(copa|cup|liga)\b/gi, ''));
+  const consultas = [nombre + ' GO', nombre, nombre + ' Pokémon GO'];
+  const vistos = [];
+  wikidexUltimoDetalle = '';
   for (const api of (wikidexApiOk ? [wikidexApiOk] : WIKIDEX_APIS)) {
     for (const q of consultas) {
-      const url = `${api}?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url&iiurlwidth=128&format=json&origin=*`;
+      const url = `${api}?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=15&prop=imageinfo&iiprop=url&iiurlwidth=128&format=json&origin=*`;
       let j;
       try { j = await pvpokeFetchJson(url, 15000); wikidexApiOk = api; }
       catch (e) { wikidexUltimoError = e.name === 'AbortError' ? 'sin respuesta' : e.message; continue; }
@@ -8119,7 +8124,8 @@ async function wikidexBuscarLogo(nombre) {
         const ii = p.imageinfo && p.imageinfo[0];
         if (!ii) return;
         const t = String(p.title || '');
-        if (core && !pvNorm(t).includes(core)) return;   // el archivo tiene que nombrar a la copa
+        if (vistos.length < 4 && !vistos.includes(t)) vistos.push(t);
+        if (core && !wikidexNorm(t).includes(core)) return;   // el archivo tiene que nombrar a la copa
         let pts = 0;
         if (/\bGO\b/i.test(t)) pts += 2;
         if (/\.(png|svg|webp)$/i.test(t)) pts += 1;
@@ -8131,9 +8137,9 @@ async function wikidexBuscarLogo(nombre) {
       if (mejor) return mejor.thumburl || mejor.url;
     }
   }
+  if (vistos.length) wikidexUltimoDetalle = 'WikiDex devolvió archivos (' + vistos.join(', ') + ') pero ninguno nombra a la copa.';
   return null;
 }
-
 // Llamada genérica a la API de WikiDex (prueba las dos rutas posibles).
 async function wikidexApi(params) {
   let ultimo = '';
@@ -8299,7 +8305,7 @@ async function copasGOBuscarUno(i, silencioso) {
   if (url) c.logo = url;
   if (!silencioso) {
     copasGOGuardar();
-    copasGOEstado(url ? `Logo de «${c.name}» encontrado.` : `No se encontró el logo de «${c.name}»${wikidexUltimoError ? ' (' + wikidexUltimoError + ')' : ''}. Pegá la URL de la imagen a mano.`);
+    copasGOEstado(url ? `Logo de «${c.name}» encontrado.` : `No se encontró el logo de «${c.name}»${wikidexUltimoError ? ' (' + wikidexUltimoError + ')' : ''}.${wikidexUltimoDetalle ? '\n' + wikidexUltimoDetalle : ''}\nPega la URL de la imagen a mano en su fila.`);
   }
   return !!url;
 }
